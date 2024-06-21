@@ -34,7 +34,11 @@ class NewPrivateChatController extends State<NewPrivateChat> {
   static const Duration _coolDown = Duration(milliseconds: 500);
 
   void searchUsers([String? input]) async {
-    final searchTerm = input ?? controller.text;
+    //TODO: UNCOMMENT THIS CODE TO ENABLE SEARCH FUNCTIONALITY
+    // int mobileNumber = int.parse(controller.text);
+
+    final searchTerm = '@${input!}:matrix.org';
+
     if (searchTerm.isEmpty) {
       _searchCoolDown?.cancel();
       setState(() {
@@ -52,16 +56,8 @@ class NewPrivateChatController extends State<NewPrivateChat> {
   }
 
   Future<List<Profile>> _searchUser(String searchTerm) async {
-    final result =
-        await Matrix.of(context).client.searchUserDirectory(searchTerm);
+    final result = await Matrix.of(context).client.searchUserDirectory(searchTerm);
     final profiles = result.results;
-
-    if (searchTerm.isValidMatrixId &&
-        searchTerm.sigil == '@' &&
-        !profiles.any((profile) => profile.userId == searchTerm)) {
-      profiles.add(Profile(userId: searchTerm));
-    }
-
     return profiles;
   }
 

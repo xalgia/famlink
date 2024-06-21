@@ -54,7 +54,6 @@ void main() async {
   await startGui(clients, store);
 }
 
-/// Fetch the pincode for the applock and start the flutter engine.
 Future<void> startGui(List<Client> clients, SharedPreferences store) async {
   // Fetch the pin for the applock if existing for mobile applications.
   String? pin;
@@ -76,8 +75,7 @@ Future<void> startGui(List<Client> clients, SharedPreferences store) async {
   runApp(FluffyChatApp(clients: clients, pincode: pin, store: store));
 }
 
-/// Watches the lifecycle changes to start the application when it
-/// is no longer detached.
+
 class AppStarter with WidgetsBindingObserver {
   final List<Client> clients;
   final SharedPreferences store;
@@ -93,13 +91,11 @@ class AppStarter with WidgetsBindingObserver {
     Logs().i(
       '${AppConfig.applicationName} switches from the detached background-fetch mode to ${state.name} mode. Rendering GUI...',
     );
-    // Switching to foreground mode needs to reenable send online sync presence.
     for (final client in clients) {
       client.backgroundSync = true;
       client.syncPresence = PresenceType.online;
     }
     startGui(clients, store);
-    // We must make sure that the GUI is only started once.
     guiStarted = true;
   }
 }

@@ -1,8 +1,10 @@
+import 'package:fluffychat/utils/matrix_sdk_extensions/flutter_matrix_dart_sdk_database/cipher.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:animations/animations.dart';
 import 'package:flutter_gen/gen_l10n/l10n.dart';
+import 'package:go_router/go_router.dart';
 import 'package:matrix/matrix.dart';
 
 import 'package:fluffychat/config/app_config.dart';
@@ -22,27 +24,67 @@ import '../../widgets/connection_status_header.dart';
 import '../../widgets/matrix.dart';
 import 'chat_list_header.dart';
 
-class ChatListViewBody extends StatelessWidget {
+class ChatListViewBody extends StatefulWidget {
   final ChatListController controller;
 
   const ChatListViewBody(this.controller, {super.key});
 
   @override
+  State<ChatListViewBody> createState() => _ChatListViewBodyState();
+}
+
+class _ChatListViewBodyState extends State<ChatListViewBody> {
+  List<String> _rooms = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRooms();
+  }
+
+  Future<void> _loadRooms() async {
+    final rooms = await UserPreferences.getRooms();
+    setState(() {
+      _rooms = rooms;
+    });
+  }
+
+  Future<void> _addRoom(String username) async {
+    await UserPreferences.addRoom(username);
+    _loadRooms();
+  }
+
+  Future<void> _updateRoom(int index, String username) async {
+    await UserPreferences.updateRoom(index, username);
+    _loadRooms();
+  }
+
+  Future<void> _deleteRoom(int index) async {
+    await UserPreferences.deleteRoom(index);
+    _loadRooms();
+  }
+
+  Future<void> _clearRooms() async {
+    await UserPreferences.clearRooms();
+    _loadRooms();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final publicRooms = controller.roomSearchResult?.chunk
-        .where((room) => room.roomType != 'm.space')
-        .toList();
-    final publicSpaces = controller.roomSearchResult?.chunk
-        .where((room) => room.roomType == 'm.space')
-        .toList();
-    final userSearchResult = controller.userSearchResult;
+    List<Room> publicRooms = [];
+    _rooms.forEach((room) {
+      publicRooms.add(
+        Matrix.of(context).client.rooms.firstWhere((element) => element.id == room),
+      );
+    });
+
+    // final publicSpaces = controller.roomSearchResult?.chunk.where((room) => room.roomType == 'm.space').toList();
+    // final userSearchResult = controller.userSearchResult;
     final client = Matrix.of(context).client;
     const dummyChatCount = 4;
-    final titleColor =
-        Theme.of(context).textTheme.bodyLarge!.color!.withAlpha(100);
-    final subtitleColor =
-        Theme.of(context).textTheme.bodyLarge!.color!.withAlpha(50);
-    final filter = controller.searchController.text.toLowerCase();
+    final titleColor = Theme.of(context).textTheme.bodyLarge!.color!.withAlpha(100);
+    final subtitleColor = Theme.of(context).textTheme.bodyLarge!.color!.withAlpha(50);
+    final filter = widget.controller.searchController.text.toLowerCase();
     return PageTransitionSwitcher(
       transitionBuilder: (
         Widget child,
@@ -60,119 +102,82 @@ class ChatListViewBody extends StatelessWidget {
       child: StreamBuilder(
         key: ValueKey(
           client.userID.toString() +
-              controller.activeFilter.toString() +
-              controller.activeSpaceId.toString(),
+              widget.controller.activeFilter.toString() +
+              widget.controller.activeSpaceId.toString(),
         ),
-        stream: client.onSync.stream
-            .where((s) => s.hasRoomUpdate)
-            .rateLimit(const Duration(seconds: 1)),
+        stream: client.onSync.stream.where((s) => s.hasRoomUpdate).rateLimit(const Duration(seconds: 1)),
         builder: (context, _) {
-          if (controller.activeFilter == ActiveFilter.spaces) {
+          if (widget.controller.activeFilter == ActiveFilter.spaces) {
             return SpaceView(
-              controller,
-              scrollController: controller.scrollController,
-              key: Key(controller.activeSpaceId ?? 'Spaces'),
+              widget.controller,
+              scrollController: widget.controller.scrollController,
+              key: Key(widget.controller.activeSpaceId ?? 'Spaces'),
             );
           }
-          final rooms = controller.filteredRooms;
+
           return SafeArea(
             child: CustomScrollView(
-              controller: controller.scrollController,
+              controller: widget.controller.scrollController,
               slivers: [
-                ChatListHeader(controller: controller),
+                // ChatListHeader(controller: controller),
                 SliverList(
                   delegate: SliverChildListDelegate(
                     [
-                      if (controller.isSearchMode) ...[
-                        SearchTitle(
-                          title: L10n.of(context)!.publicRooms,
-                          icon: const Icon(Icons.explore_outlined),
-                        ),
-                        PublicRoomsHorizontalList(publicRooms: publicRooms),
-                        SearchTitle(
-                          title: L10n.of(context)!.publicSpaces,
-                          icon: const Icon(Icons.workspaces_outlined),
-                        ),
-                        PublicRoomsHorizontalList(publicRooms: publicSpaces),
-                        SearchTitle(
-                          title: L10n.of(context)!.users,
-                          icon: const Icon(Icons.group_outlined),
-                        ),
-                        AnimatedContainer(
-                          clipBehavior: Clip.hardEdge,
-                          decoration: const BoxDecoration(),
-                          height: userSearchResult == null ||
-                                  userSearchResult.results.isEmpty
-                              ? 0
-                              : 106,
-                          duration: FluffyThemes.animationDuration,
-                          curve: FluffyThemes.animationCurve,
-                          child: userSearchResult == null
-                              ? null
-                              : ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: userSearchResult.results.length,
-                                  itemBuilder: (context, i) => _SearchItem(
-                                    title: userSearchResult
-                                            .results[i].displayName ??
-                                        userSearchResult
-                                            .results[i].userId.localpart ??
-                                        L10n.of(context)!.unknownDevice,
-                                    avatar:
-                                        userSearchResult.results[i].avatarUrl,
-                                    onPressed: () => showAdaptiveBottomSheet(
-                                      context: context,
-                                      builder: (c) => UserBottomSheet(
-                                        profile: userSearchResult.results[i],
-                                        outerContext: context,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      ],
-                      if (!controller.isSearchMode &&
-                          controller.activeFilter != ActiveFilter.groups &&
-                          AppConfig.showPresences)
-                        GestureDetector(
-                          onLongPress: () => controller.dismissStatusList(),
-                          child: StatusMessageList(
-                            onStatusEdit: controller.setStatus,
-                          ),
-                        ),
-                      const ConnectionStatusHeader(),
-                      AnimatedContainer(
-                        height: controller.isTorBrowser ? 64 : 0,
-                        duration: FluffyThemes.animationDuration,
-                        curve: FluffyThemes.animationCurve,
-                        clipBehavior: Clip.hardEdge,
-                        decoration: const BoxDecoration(),
-                        child: Material(
-                          color: Theme.of(context).colorScheme.surface,
-                          child: ListTile(
-                            leading: const Icon(Icons.vpn_key),
-                            title: Text(L10n.of(context)!.dehydrateTor),
-                            subtitle: Text(L10n.of(context)!.dehydrateTorLong),
-                            trailing: const Icon(Icons.chevron_right_outlined),
-                            onTap: controller.dehydrate,
-                          ),
-                        ),
-                      ),
-                      if (controller.isSearchMode)
-                        SearchTitle(
-                          title: L10n.of(context)!.chats,
-                          icon: const Icon(Icons.forum_outlined),
-                        ),
-                      if (client.prevBatch != null &&
-                          rooms.isEmpty &&
-                          !controller.isSearchMode) ...[
+                      // if (widget.controller.isSearchMode) ...[
+                      // SearchTitle(
+                      //   title: L10n.of(context)!.publicRooms,
+                      //   icon: const Icon(Icons.explore_outlined),
+                      // ),
+                      // PublicRoomsHorizontalList(publicRooms: publicRooms),
+                      // SearchTitle(
+                      //   title: L10n.of(context)!.publicSpaces,
+                      //   icon: const Icon(Icons.workspaces_outlined),
+                      // ),
+                      // PublicRoomsHorizontalList(publicRooms: publicSpaces),
+                      // SearchTitle(
+                      //   title: L10n.of(context)!.users,
+                      //   icon: const Icon(Icons.group_outlined),
+                      // ),
+                      // ],
+                      // if (!widget.controller.isSearchMode &&
+                      //     widget.controller.activeFilter != ActiveFilter.groups &&
+                      //     AppConfig.showPresences)
+                      //   GestureDetector(
+                      //     onLongPress: () => widget.controller.dismissStatusList(),
+                      //     child: StatusMessageList(
+                      //       onStatusEdit: widget.controller.setStatus,
+                      //     ),
+                      //   ),
+                      // const ConnectionStatusHeader(),
+                      // AnimatedContainer(
+                      //   height: widget.controller.isTorBrowser ? 64 : 0,
+                      //   duration: FluffyThemes.animationDuration,
+                      //   curve: FluffyThemes.animationCurve,
+                      //   clipBehavior: Clip.hardEdge,
+                      //   decoration: const BoxDecoration(),
+                      //   child: Material(
+                      //     color: Theme.of(context).colorScheme.surface,
+                      //     child: ListTile(
+                      //       leading: const Icon(Icons.vpn_key),
+                      //       title: Text(L10n.of(context)!.dehydrateTor),
+                      //       subtitle: Text(L10n.of(context)!.dehydrateTorLong),
+                      //       trailing: const Icon(Icons.chevron_right_outlined),
+                      //       onTap: widget.controller.dehydrate,
+                      //     ),
+                      //   ),
+                      // ),
+                      // if (widget.controller.isSearchMode)
+                      //   SearchTitle(
+                      //     title: L10n.of(context)!.chats,
+                      //     icon: const Icon(Icons.forum_outlined),
+                      //   ),
+                      if (client.prevBatch != null && _rooms.isEmpty && !widget.controller.isSearchMode) ...[
                         Padding(
                           padding: const EdgeInsets.all(32.0),
                           child: Icon(
                             CupertinoIcons.chat_bubble_2,
                             size: 128,
-                            color:
-                                Theme.of(context).colorScheme.onInverseSurface,
+                            color: Theme.of(context).colorScheme.onInverseSurface,
                           ),
                         ),
                       ],
@@ -189,8 +194,7 @@ class ChatListViewBody extends StatelessWidget {
                             backgroundColor: titleColor,
                             child: CircularProgressIndicator(
                               strokeWidth: 1,
-                              color:
-                                  Theme.of(context).textTheme.bodyLarge!.color,
+                              color: Theme.of(context).textTheme.bodyLarge!.color,
                             ),
                           ),
                           title: Row(
@@ -238,22 +242,41 @@ class ChatListViewBody extends StatelessWidget {
                     ),
                   ),
                 if (client.prevBatch != null)
-                  SliverList.builder(
-                    itemCount: rooms.length,
+                  SliverGrid.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 1.5,
+                    ),
+                    itemCount: (publicRooms == null ? 1 : publicRooms.length + 1),
                     itemBuilder: (BuildContext context, int i) {
-                      return ChatListItem(
-                        rooms[i],
-                        key: Key('chat_list_item_${rooms[i].id}'),
-                        filter: filter,
-                        selected:
-                            controller.selectedRoomIds.contains(rooms[i].id),
-                        onTap: controller.selectMode == SelectMode.select
-                            ? () => controller.toggleSelection(rooms[i].id)
-                            : () => onChatTap(rooms[i], context),
-                        onLongPress: () =>
-                            controller.toggleSelection(rooms[i].id),
-                        activeChat: controller.activeChat == rooms[i].id,
-                      );
+                      if (i == (publicRooms.length ?? 0)) {
+                        return GestureDetector(
+                          onTap: () => context.go('/rooms/newprivatechat'),
+                          child: Container(
+                            margin: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.add,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                        );
+                      } else {
+                        return GestureDetector( 
+                          onLongPress: () => {},
+                          child: ChatListItem(
+                            publicRooms[i],
+                            onTap: (){
+                              onChatTap(publicRooms[i],context);
+                            },
+                          ),
+                        );
+                      }
                     },
                   ),
               ],
@@ -288,15 +311,12 @@ class PublicRoomsHorizontalList extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               itemCount: publicRooms.length,
               itemBuilder: (context, i) => _SearchItem(
-                title: publicRooms[i].name ??
-                    publicRooms[i].canonicalAlias?.localpart ??
-                    L10n.of(context)!.group,
+                title: publicRooms[i].name ?? publicRooms[i].canonicalAlias?.localpart ?? L10n.of(context)!.group,
                 avatar: publicRooms[i].avatarUrl,
                 onPressed: () => showAdaptiveBottomSheet(
                   context: context,
                   builder: (c) => PublicRoomBottomSheet(
-                    roomAlias:
-                        publicRooms[i].canonicalAlias ?? publicRooms[i].roomId,
+                    roomAlias: publicRooms[i].canonicalAlias ?? publicRooms[i].roomId,
                     outerContext: context,
                     chunk: publicRooms[i],
                   ),

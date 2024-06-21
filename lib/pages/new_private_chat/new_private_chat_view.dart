@@ -29,18 +29,13 @@ class NewPrivateChatView extends StatelessWidget {
         leading: const Center(child: BackButton()),
         title: Text(L10n.of(context)!.newChat),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        actions: [
-          TextButton(
-            onPressed:
-                UrlLauncher(context, AppConfig.startChatTutorial).launchUrl,
-            child: Text(L10n.of(context)!.help),
-          ),
-        ],
       ),
       body: MaxWidthBody(
         withScrolling: false,
         innerPadding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -49,16 +44,17 @@ class NewPrivateChatView extends StatelessWidget {
               ),
               child: TextField(
                 controller: controller.controller,
-                onChanged: controller.searchUsers,
+                onChanged: (value) {
+                  (value.length == 10) ? controller.searchUsers(value) : () {};
+                },
                 decoration: InputDecoration(
-                  hintText: L10n.of(context)!.searchForUsers,
+                  hintText: "Enter mobile number",
                   prefixIcon: searchResponse == null
-                      ? const Icon(Icons.search_outlined)
+                      ? const Icon(Icons.input_rounded)
                       : FutureBuilder(
                           future: searchResponse,
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState !=
-                                ConnectionState.done) {
+                            if (snapshot.connectionState != ConnectionState.done) {
                               return const Padding(
                                 padding: EdgeInsets.all(10.0),
                                 child: SizedBox.square(
@@ -69,7 +65,7 @@ class NewPrivateChatView extends StatelessWidget {
                                 ),
                               );
                             }
-                            return const Icon(Icons.search_outlined);
+                            return const Icon(Icons.input_rounded);
                           },
                         ),
                   suffixIcon: controller.controller.text.isEmpty
@@ -77,7 +73,7 @@ class NewPrivateChatView extends StatelessWidget {
                       : IconButton(
                           icon: const Icon(Icons.clear_outlined),
                           onPressed: () {
-                            controller.controller.clear();
+                            controller.controller.text = '';
                             controller.searchUsers();
                           },
                         ),
@@ -87,19 +83,17 @@ class NewPrivateChatView extends StatelessWidget {
             Expanded(
               child: AnimatedCrossFade(
                 duration: FluffyThemes.animationDuration,
-                crossFadeState: searchResponse == null
-                    ? CrossFadeState.showFirst
-                    : CrossFadeState.showSecond,
-                firstChild: ListView(
+                crossFadeState: searchResponse == null ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                firstChild: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 18.0),
                       child: SelectableText.rich(
                         TextSpan(
                           children: [
-                            TextSpan(
-                              text: L10n.of(context)!.yourGlobalUserIdIs,
-                            ),
+                            const TextSpan(text: "Your ID:"),
                             TextSpan(
                               text: Matrix.of(context).client.userID,
                               style: const TextStyle(
@@ -114,75 +108,52 @@ class NewPrivateChatView extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            Theme.of(context).colorScheme.secondaryContainer,
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onSecondaryContainer,
-                        child: Icon(Icons.adaptive.share_outlined),
-                      ),
-                      title: Text(L10n.of(context)!.shareInviteLink),
-                      onTap: controller.inviteAction,
-                    ),
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            Theme.of(context).colorScheme.tertiaryContainer,
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onTertiaryContainer,
-                        child: const Icon(Icons.group_add_outlined),
-                      ),
-                      title: Text(L10n.of(context)!.createGroup),
-                      onTap: () => context.go('/rooms/newgroup'),
-                    ),
-                    if (PlatformInfos.isMobile)
-                      ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                          foregroundColor:
-                              Theme.of(context).colorScheme.onPrimaryContainer,
-                          child: const Icon(Icons.qr_code_scanner_outlined),
-                        ),
-                        title: Text(L10n.of(context)!.scanQrCode),
-                        onTap: controller.openScannerAction,
-                      ),
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(64.0),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 256),
-                          child: Material(
-                            borderRadius: BorderRadius.circular(12),
-                            elevation: 10,
-                            color: Colors.white,
-                            shadowColor:
-                                Theme.of(context).appBarTheme.shadowColor,
-                            clipBehavior: Clip.hardEdge,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: PrettyQrView.data(
-                                data:
-                                    'https://matrix.to/#/${Matrix.of(context).client.userID}',
-                                decoration: PrettyQrDecoration(
-                                  shape: PrettyQrSmoothSymbol(
-                                    roundFactor: 1,
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.light
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onPrimary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                    // if (PlatformInfos.isMobile)
+                    //   ListTile(
+                    //     leading: CircleAvatar(
+                    //       backgroundColor:
+                    //           Theme.of(context).colorScheme.primaryContainer,
+                    //       foregroundColor:
+                    //           Theme.of(context).colorScheme.onPrimaryContainer,
+                    //       child: const Icon(Icons.qr_code_scanner_outlined),
+                    //     ),
+                    //     title: Text(L10n.of(context)!.scanQrCode),
+                    //     onTap: controller.openScannerAction,
+                    //   ),
+                    // Center(
+                    //   child: Padding(
+                    //     padding: const EdgeInsets.all(64.0),
+                    //     child: ConstrainedBox(
+                    //       constraints: const BoxConstraints(maxHeight: 256),
+                    //       child: Material(
+                    //         borderRadius: BorderRadius.circular(12),
+                    //         elevation: 10,
+                    //         color: Colors.white,
+                    //         shadowColor:
+                    //             Theme.of(context).appBarTheme.shadowColor,
+                    //         clipBehavior: Clip.hardEdge,
+                    //         child: Padding(
+                    //           padding: const EdgeInsets.all(8),
+                    //           child: PrettyQrView.data(
+                    //             data:
+                    //                 'https://matrix.to/#/${Matrix.of(context).client.userID}',
+                    //             decoration: PrettyQrDecoration(
+                    //               shape: PrettyQrSmoothSymbol(
+                    //                 roundFactor: 1,
+                    //                 color: Theme.of(context).brightness ==
+                    //                         Brightness.light
+                    //                     ? Theme.of(context).colorScheme.primary
+                    //                     : Theme.of(context)
+                    //                         .colorScheme
+                    //                         .onPrimary,
+                    //               ),
+                    //             ),
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
                 secondChild: FutureBuilder(
@@ -242,15 +213,17 @@ class NewPrivateChatView extends StatelessWidget {
                         final displayname = contact.displayName ??
                             contact.userId.localpart ??
                             contact.userId;
-                        return ListTile(
-                          leading: Avatar(
-                            name: displayname,
-                            mxContent: contact.avatarUrl,
-                            presenceUserId: contact.userId,
+                        return Center(
+                          child: ListTile(
+                            leading: Avatar(
+                              name: displayname,
+                              mxContent: contact.avatarUrl,
+                              presenceUserId: contact.userId,
+                            ),
+                            title: Text(displayname),
+                            subtitle: Text(contact.userId),
+                            onTap: () => controller.openUserModal(contact),
                           ),
-                          title: Text(displayname),
-                          subtitle: Text(contact.userId),
-                          onTap: () => controller.openUserModal(contact),
                         );
                       },
                     );

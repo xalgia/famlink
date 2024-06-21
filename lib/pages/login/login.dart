@@ -166,8 +166,7 @@ class LoginController extends State<Login> {
       fullyCapitalizedForMaterial: false,
       textFields: [
         DialogTextField(
-          initialText:
-              usernameController.text.isEmail ? usernameController.text : '',
+          initialText: usernameController.text,
           hintText: L10n.of(context)!.enterAnEmailAddress,
           keyboardType: TextInputType.emailAddress,
         ),
@@ -212,36 +211,40 @@ class LoginController extends State<Login> {
       fullyCapitalizedForMaterial: false,
     );
     if (ok != OkCancelResult.ok) return;
-    final data = <String, dynamic>{
-      'new_password': password.single,
-      'logout_devices': false,
-      "auth": AuthenticationThreePidCreds(
-        type: AuthenticationTypes.emailIdentity,
-        threepidCreds: ThreepidCreds(
-          sid: response.result!.sid,
-          clientSecret: clientSecret,
-        ),
-      ).toJson(),
-    };
-    final success = await showFutureLoadingDialog(
-      context: context,
-      future: () => Matrix.of(context).getLoginClient().request(
-            RequestType.POST,
-            '/client/v3/account/password',
-            data: data,
+    if(response.result !=null){
+      final data = <String, dynamic>{
+        'new_password': password.single,
+        'logout_devices': false,
+        "auth": AuthenticationThreePidCreds(
+          type: AuthenticationTypes.emailIdentity,
+          threepidCreds: ThreepidCreds(
+            sid: response.result!.sid,
+            clientSecret: clientSecret,
           ),
-    );
-    if (success.error == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(L10n.of(context)!.passwordHasBeenChanged)),
+        ).toJson(),
+      };
+      final success = await showFutureLoadingDialog(
+        context: context,
+        future: () => Matrix.of(context).getLoginClient().request(
+          RequestType.POST,
+          '/client/v3/account/password',
+          data: data,
+        ),
       );
-      usernameController.text = input.single;
-      passwordController.text = password.single;
-      login();
-    }
+      if (success.error == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(L10n.of(context)!.passwordHasBeenChanged)),
+        );
+        usernameController.text = input.single;
+        passwordController.text = password.single;
+        login();
+      }
+    }else{}
+
+
   }
 
-  static int sendAttempt = 0;
+  static int sendAttempt = 10;
 
   @override
   Widget build(BuildContext context) => LoginView(this);

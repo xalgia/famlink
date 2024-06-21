@@ -62,20 +62,20 @@ abstract class AppRoutes {
       pageBuilder: (context, state) => defaultPageBuilder(
         context,
         state,
-        const HomeserverPicker(),
+        const Login(),
       ),
       redirect: loggedInRedirect,
-      routes: [
-        GoRoute(
-          path: 'login',
-          pageBuilder: (context, state) => defaultPageBuilder(
-            context,
-            state,
-            const Login(),
-          ),
-          redirect: loggedInRedirect,
-        ),
-      ],
+      // routes: [
+      //   GoRoute(
+      //     path: 'login',
+      //     pageBuilder: (context, state) => defaultPageBuilder(
+      //       context,
+      //       state,
+      //       const Login(),
+      //     ),
+      //     redirect: loggedInRedirect,
+      //   ),
+      // ],
     ),
     GoRoute(
       path: '/logs',

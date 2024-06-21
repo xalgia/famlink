@@ -43,23 +43,12 @@ class LoginScaffold extends StatelessWidget {
       backgroundColor: isMobileMode
           ? null
           : Theme.of(context).colorScheme.surface.withOpacity(0.8),
-      bottomNavigationBar: isMobileMode
-          ? Material(
-              elevation: 4,
-              shadowColor: Theme.of(context).colorScheme.onSurface,
-              child: const _PrivacyButtons(
-                mainAxisAlignment: MainAxisAlignment.center,
-              ),
-            )
-          : null,
+
     );
     if (isMobileMode) return scaffold;
     return Container(
       decoration: const BoxDecoration(
-        image: DecorationImage(
-          fit: BoxFit.cover,
-          image: AssetImage('assets/login_wallpaper.png'),
-        ),
+
       ),
       child: Column(
         children: [
@@ -91,55 +80,9 @@ class LoginScaffold extends StatelessWidget {
               ),
             ),
           ),
-          const _PrivacyButtons(mainAxisAlignment: MainAxisAlignment.center),
         ],
       ),
     );
   }
 }
 
-class _PrivacyButtons extends StatelessWidget {
-  final MainAxisAlignment mainAxisAlignment;
-  const _PrivacyButtons({required this.mainAxisAlignment});
-
-  @override
-  Widget build(BuildContext context) {
-    final shadowTextStyle = FluffyThemes.isColumnMode(context)
-        ? const TextStyle(
-            color: Colors.white,
-            shadows: [
-              Shadow(
-                offset: Offset(0.0, 0.0),
-                blurRadius: 3,
-                color: Colors.black,
-              ),
-            ],
-          )
-        : null;
-    return SizedBox(
-      height: 64,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          mainAxisAlignment: mainAxisAlignment,
-          children: [
-            TextButton(
-              onPressed: () => PlatformInfos.showDialog(context),
-              child: Text(
-                L10n.of(context)!.about,
-                style: shadowTextStyle,
-              ),
-            ),
-            TextButton(
-              onPressed: () => launchUrlString(AppConfig.privacyUrl),
-              child: Text(
-                L10n.of(context)!.privacy,
-                style: shadowTextStyle,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

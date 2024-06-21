@@ -197,10 +197,28 @@ class HomeserverPickerController extends State<HomeserverPicker> {
     return cachedHomeservers = homeserverList;
   }
 
-  void login() => context.push(
-        '${GoRouter.of(context).routeInformationProvider.value.uri.path}/login',
-      );
-
+  void login() {
+    print('${GoRouter
+        .of(context)
+        .routeInformationProvider
+        .value
+        .uri
+        .path}/login');
+    context.push(
+      '${GoRouter
+          .of(context)
+          .routeInformationProvider
+          .value
+          .uri
+          .path}/login',
+    );
+    print('${GoRouter
+        .of(context)
+        .routeInformationProvider
+        .value
+        .uri
+        .path}/login');
+  }
   @override
   void initState() {
     _checkTorBrowser();

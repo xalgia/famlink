@@ -1,3 +1,4 @@
+import 'package:fluffychat/utils/matrix_sdk_extensions/flutter_matrix_dart_sdk_database/cipher.dart';
 import 'package:flutter/material.dart';
 
 import 'package:adaptive_dialog/adaptive_dialog.dart';
@@ -34,13 +35,9 @@ class LoadProfileBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<ProfileInformation>(
-      future: Matrix.of(outerContext)
-          .client
-          .getUserProfile(userId)
-          .timeout(const Duration(seconds: 3)),
+      future: Matrix.of(outerContext).client.getUserProfile(userId).timeout(const Duration(seconds: 3)),
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done &&
-            snapshot.data != null) {
+        if (snapshot.connectionState != ConnectionState.done && snapshot.data != null) {
           return Scaffold(
             appBar: AppBar(
               leading: CloseButton(
@@ -205,14 +202,16 @@ class UserBottomSheetController extends State<UserBottomSheet> {
         Navigator.of(context).pop();
         // Workaround for https://github.com/flutter/flutter/issues/27495
         await Future.delayed(FluffyThemes.animationDuration);
-
         final roomIdResult = await showFutureLoadingDialog(
           context: widget.outerContext,
-          future: () => Matrix.of(widget.outerContext)
-              .client
-              .startDirectChat(user?.id ?? widget.profile!.userId),
+          future: () => Matrix.of(widget.outerContext).client.startDirectChat(user?.id ?? widget.profile!.userId),
         );
+
         final roomId = roomIdResult.result;
+        if (roomIdResult.result != null) {
+          UserPreferences.addRoom(roomIdResult.result.toString());
+          print('Room added to UserPreferences');
+        }
         if (roomId == null) return;
         widget.outerContext.go('/rooms/$roomId');
         break;
@@ -221,8 +220,7 @@ class UserBottomSheetController extends State<UserBottomSheet> {
         // Workaround for https://github.com/flutter/flutter/issues/27495
         await Future.delayed(FluffyThemes.animationDuration);
         final userId = user?.id ?? widget.profile?.userId;
-        widget.outerContext
-            .go('/rooms/settings/security/ignorelist', extra: userId);
+        widget.outerContext.go('/rooms/settings/security/ignorelist', extra: userId);
     }
   }
 

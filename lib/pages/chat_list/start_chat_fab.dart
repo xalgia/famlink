@@ -69,16 +69,8 @@ class StartChatFloatingActionButton extends StatelessWidget {
         duration: FluffyThemes.animationDuration,
         curve: FluffyThemes.animationCurve,
         clipBehavior: Clip.none,
-        child: scrolledToTop
-            ? FloatingActionButton.extended(
-                onPressed: () => _onPressed(context),
-                icon: Icon(icon),
-                label: Text(
-                  getLabel(context),
-                  overflow: TextOverflow.fade,
-                ),
-              )
-            : FloatingActionButton(
+        child:
+            FloatingActionButton(
                 onPressed: () => _onPressed(context),
                 child: Icon(icon),
               ),

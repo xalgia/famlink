@@ -106,61 +106,14 @@ class ChatListItem extends StatelessWidget {
         child: FutureBuilder(
           future: room.loadHeroUsers(),
           builder: (context, snapshot) => HoverBuilder(
-            builder: (context, hovered) => ListTile(
+            builder: (context, hovered) =>
+                ListTile(
               visualDensity: const VisualDensity(vertical: -0.5),
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               onLongPress: onLongPress,
-              leading: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  HoverBuilder(
-                    builder: (context, hovered) => AnimatedScale(
-                      duration: FluffyThemes.animationDuration,
-                      curve: FluffyThemes.animationCurve,
-                      scale: hovered ? 1.1 : 1.0,
-                      child: Avatar(
-                        mxContent: room.avatar,
-                        name: displayname,
-                        presenceUserId: directChatMatrixId,
-                        presenceBackgroundColor: backgroundColor,
-                        onTap: onLongPress,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -2,
-                    right: -2,
-                    child: AnimatedScale(
-                      duration: FluffyThemes.animationDuration,
-                      curve: FluffyThemes.animationCurve,
-                      scale: (hovered || selected) ? 1.0 : 0.0,
-                      child: Material(
-                        color: backgroundColor,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Icon(
-                          selected
-                              ? Icons.check_circle
-                              : Icons.check_circle_outlined,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              title: Row(
+
+              title: Column(
                 children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      displayname,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      softWrap: false,
-                      style: unread || room.hasNewMessages
-                          ? const TextStyle(fontWeight: FontWeight.bold)
-                          : null,
-                    ),
-                  ),
                   if (isMuted)
                     const Padding(
                       padding: EdgeInsets.only(left: 4.0),
@@ -195,7 +148,7 @@ class ChatListItem extends StatelessWidget {
                     ),
                 ],
               ),
-              subtitle: Row(
+              subtitle: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   if (typingText.isEmpty &&

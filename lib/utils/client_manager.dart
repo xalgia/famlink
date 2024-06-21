@@ -93,19 +93,16 @@ abstract class ClientManager {
     await store.setStringList(clientNamespace, clientNamesList);
   }
 
-  static NativeImplementations get nativeImplementations => kIsWeb
-      ? const NativeImplementationsDummy()
-      : NativeImplementationsIsolate(compute);
+  static NativeImplementations get nativeImplementations =>
+      kIsWeb ? const NativeImplementationsDummy() : NativeImplementationsIsolate(compute);
 
   static Client createClient(String clientName) {
     return Client(
       clientName,
-      httpClient:
-          PlatformInfos.isAndroid ? CustomHttpClient.createHTTPClient() : null,
+      httpClient: PlatformInfos.isAndroid ? CustomHttpClient.createHTTPClient() : null,
       verificationMethods: {
         KeyVerificationMethod.numbers,
-        if (kIsWeb || PlatformInfos.isMobile || PlatformInfos.isLinux)
-          KeyVerificationMethod.emoji,
+        if (kIsWeb || PlatformInfos.isMobile || PlatformInfos.isLinux) KeyVerificationMethod.emoji,
       },
       importantStateEvents: <String>{
         // To make room emotes work
@@ -170,3 +167,7 @@ abstract class ClientManager {
     );
   }
 }
+
+
+
+

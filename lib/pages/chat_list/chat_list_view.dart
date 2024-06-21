@@ -182,23 +182,23 @@ class ChatListView extends StatelessWidget {
                   behavior: HitTestBehavior.translucent,
                   child: Scaffold(
                     body: ChatListViewBody(controller),
-                    bottomNavigationBar: controller.displayNavigationBar
-                        ? NavigationBar(
-                            elevation: 4,
-                            labelBehavior:
-                                NavigationDestinationLabelBehavior.alwaysShow,
-                            shadowColor:
-                                Theme.of(context).colorScheme.onSurface,
-                            backgroundColor:
-                                Theme.of(context).colorScheme.surface,
-                            surfaceTintColor:
-                                Theme.of(context).colorScheme.surface,
-                            selectedIndex: controller.selectedIndex,
-                            onDestinationSelected:
-                                controller.onDestinationSelected,
-                            destinations: getNavigationDestinations(context),
-                          )
-                        : null,
+                    // bottomNavigationBar: controller.displayNavigationBar
+                    //     ? NavigationBar(
+                    //         elevation: 4,
+                    //         labelBehavior:
+                    //             NavigationDestinationLabelBehavior.alwaysShow,
+                    //         shadowColor:
+                    //             Theme.of(context).colorScheme.onSurface,
+                    //         backgroundColor:
+                    //             Theme.of(context).colorScheme.surface,
+                    //         surfaceTintColor:
+                    //             Theme.of(context).colorScheme.surface,
+                    //         selectedIndex: controller.selectedIndex,
+                    //         onDestinationSelected:
+                    //             controller.onDestinationSelected,
+                    //         destinations: getNavigationDestinations(context),
+                    //       )
+                    //     : null,
                     floatingActionButton: KeyBoardShortcuts(
                       keysToPress: {
                         LogicalKeyboardKey.controlLeft,
