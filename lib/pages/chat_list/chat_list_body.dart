@@ -123,54 +123,7 @@ class _ChatListViewBodyState extends State<ChatListViewBody> {
                 SliverList(
                   delegate: SliverChildListDelegate(
                     [
-                      // if (widget.controller.isSearchMode) ...[
-                      // SearchTitle(
-                      //   title: L10n.of(context)!.publicRooms,
-                      //   icon: const Icon(Icons.explore_outlined),
-                      // ),
-                      // PublicRoomsHorizontalList(publicRooms: publicRooms),
-                      // SearchTitle(
-                      //   title: L10n.of(context)!.publicSpaces,
-                      //   icon: const Icon(Icons.workspaces_outlined),
-                      // ),
-                      // PublicRoomsHorizontalList(publicRooms: publicSpaces),
-                      // SearchTitle(
-                      //   title: L10n.of(context)!.users,
-                      //   icon: const Icon(Icons.group_outlined),
-                      // ),
-                      // ],
-                      // if (!widget.controller.isSearchMode &&
-                      //     widget.controller.activeFilter != ActiveFilter.groups &&
-                      //     AppConfig.showPresences)
-                      //   GestureDetector(
-                      //     onLongPress: () => widget.controller.dismissStatusList(),
-                      //     child: StatusMessageList(
-                      //       onStatusEdit: widget.controller.setStatus,
-                      //     ),
-                      //   ),
-                      // const ConnectionStatusHeader(),
-                      // AnimatedContainer(
-                      //   height: widget.controller.isTorBrowser ? 64 : 0,
-                      //   duration: FluffyThemes.animationDuration,
-                      //   curve: FluffyThemes.animationCurve,
-                      //   clipBehavior: Clip.hardEdge,
-                      //   decoration: const BoxDecoration(),
-                      //   child: Material(
-                      //     color: Theme.of(context).colorScheme.surface,
-                      //     child: ListTile(
-                      //       leading: const Icon(Icons.vpn_key),
-                      //       title: Text(L10n.of(context)!.dehydrateTor),
-                      //       subtitle: Text(L10n.of(context)!.dehydrateTorLong),
-                      //       trailing: const Icon(Icons.chevron_right_outlined),
-                      //       onTap: widget.controller.dehydrate,
-                      //     ),
-                      //   ),
-                      // ),
-                      // if (widget.controller.isSearchMode)
-                      //   SearchTitle(
-                      //     title: L10n.of(context)!.chats,
-                      //     icon: const Icon(Icons.forum_outlined),
-                      //   ),
+                     
                       if (client.prevBatch != null && _rooms.isEmpty && !widget.controller.isSearchMode) ...[
                         Padding(
                           padding: const EdgeInsets.all(32.0),
