@@ -50,26 +50,7 @@ class ChatDetailsView extends StatelessWidget {
           MatrixLocals(L10n.of(context)!),
         );
         return Scaffold(
-          appBar: AppBar(
-            leading: controller.widget.embeddedCloseButton ??
-                const Center(child: BackButton()),
-            elevation: Theme.of(context).appBarTheme.elevation,
-            actions: <Widget>[
-              if (room.canonicalAlias.isNotEmpty)
-                IconButton(
-                  tooltip: L10n.of(context)!.share,
-                  icon: Icon(Icons.adaptive.share_outlined),
-                  onPressed: () => FluffyShare.share(
-                    AppConfig.inviteLinkPrefix + room.canonicalAlias,
-                    context,
-                  ),
-                ),
-              if (controller.widget.embeddedCloseButton == null)
-                ChatSettingsPopupMenu(room, false),
-            ],
-            title: Text(L10n.of(context)!.chatDetails),
-            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-          ),
+          
           body: MaxWidthBody(
             child: ListView.builder(
               physics: const NeverScrollableScrollPhysics(),
