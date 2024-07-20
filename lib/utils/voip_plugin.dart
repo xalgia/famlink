@@ -41,7 +41,7 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
 
   void addCallingOverlay(String callId, CallSession call) {
     final context =
-        kIsWeb ? ChatList.contextForVoip! : this.context; // web is weird
+        kIsWeb ? DashboardList.contextForVoip! : this.context; // web is weird
 
     if (overlayEntry != null) {
       Logs().e('[VOIP] addCallingOverlay: The call session already exists?');

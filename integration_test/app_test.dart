@@ -66,7 +66,7 @@ void main() {
             500,
             scrollable: find
                 .descendant(
-                  of: find.byType(ChatListViewBody),
+                  of: find.byType(Dashboard),
                   matching: find.byType(Scrollable),
                 )
                 .first,
@@ -82,7 +82,7 @@ void main() {
             500,
             scrollable: find
                 .descendant(
-                  of: find.byType(ChatListViewBody),
+                  of: find.byType(Dashboard),
                   matching: find.byType(Scrollable),
                 )
                 .first,

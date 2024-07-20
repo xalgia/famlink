@@ -16,7 +16,7 @@ class NaviRailItem extends StatefulWidget {
     required this.onTap,
     required this.icon,
     this.selectedIcon,
-    super.key,
+    super.key, required bool Function(dynamic room) unreadBadgeFilter,
   });
 
   @override

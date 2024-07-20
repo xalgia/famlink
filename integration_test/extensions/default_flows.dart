@@ -82,7 +82,7 @@ extension DefaultFlowExtensions on WidgetTester {
     }
 
     await tester.waitFor(
-      find.byType(ChatListViewBody),
+      find.byType(Dashboard),
       skipPumpAndSettle: true,
     );
   }
@@ -105,7 +105,7 @@ extension DefaultFlowExtensions on WidgetTester {
   Future<void> ensureLoggedOut() async {
     final tester = this;
     await tester.pumpAndSettle();
-    if (find.byType(ChatListViewBody).evaluate().isNotEmpty) {
+    if (find.byType(Dashboard).evaluate().isNotEmpty) {
       await tester.tap(find.byTooltip('Show menu'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Settings'));
@@ -133,7 +133,7 @@ extension DefaultFlowExtensions on WidgetTester {
     await tester.pumpAndSettle();
 
     final homeserverPickerFinder = find.byType(HomeserverPicker);
-    final chatListFinder = find.byType(ChatListViewBody);
+    final chatListFinder = find.byType(Dashboard);
 
     final end = DateTime.now().add(timeout);
 

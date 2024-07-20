@@ -41,7 +41,7 @@ abstract class AppRoutes {
     BuildContext context,
     GoRouterState state,
   ) =>
-      Matrix.of(context).client.isLogged() ? '/rooms' : null;
+      Matrix.of(context).client.isLogged() ? '/dashboard' : null;
 
   static FutureOr<String?> loggedOutRedirect(
     BuildContext context,
@@ -54,28 +54,27 @@ abstract class AppRoutes {
   static final List<RouteBase> routes = [
     GoRoute(
       path: '/',
-      redirect: (context, state) =>
-          Matrix.of(context).client.isLogged() ? '/rooms' : '/home',
+      redirect: (context, state) => Matrix.of(context).client.isLogged() ? '/dashboard' : '/home',
     ),
     GoRoute(
       path: '/home',
       pageBuilder: (context, state) => defaultPageBuilder(
         context,
         state,
-        const Login(),
+        const HomeserverPicker(),
       ),
       redirect: loggedInRedirect,
-      // routes: [
-      //   GoRoute(
-      //     path: 'login',
-      //     pageBuilder: (context, state) => defaultPageBuilder(
-      //       context,
-      //       state,
-      //       const Login(),
-      //     ),
-      //     redirect: loggedInRedirect,
-      //   ),
-      // ],
+      routes: [
+        GoRoute(
+          path: 'login',
+          pageBuilder: (context, state) => defaultPageBuilder(
+            context,
+            state,
+            const Login(),
+          ),
+          redirect: loggedInRedirect,
+        ),
+      ],
     ),
     GoRoute(
       path: '/logs',
@@ -89,21 +88,32 @@ abstract class AppRoutes {
       pageBuilder: (context, state, child) => defaultPageBuilder(
         context,
         state,
-        FluffyThemes.isColumnMode(context) &&
-                state.fullPath?.startsWith('/rooms/settings') == false
+        FluffyThemes.isColumnMode(context) && state.fullPath?.startsWith('/rooms/settings') == false
             ? TwoColumnLayout(
-                displayNavigationRail:
-                    state.path?.startsWith('/rooms/settings') != true,
+                displayNavigationRail: state.path?.startsWith('/rooms/settings') != true,
                 mainView: ChatList(
                   activeChat: state.pathParameters['roomid'],
-                  displayNavigationRail:
-                      state.path?.startsWith('/rooms/settings') != true,
+                  displayNavigationRail: state.path?.startsWith('/rooms/settings') != true,
                 ),
                 sideView: child,
               )
             : child,
       ),
       routes: [
+        GoRoute(
+          path: '/dashboard',
+          redirect: loggedOutRedirect,
+          pageBuilder: (context, state) => defaultPageBuilder(
+            context,
+            state,
+            FluffyThemes.isColumnMode(context)
+                ? const EmptyPage()
+                : DashboardList(
+                    activeChat: state.pathParameters['roomid'],
+                  ),
+          ),
+          routes: [],
+        ),
         GoRoute(
           path: '/rooms',
           redirect: loggedOutRedirect,
@@ -185,9 +195,7 @@ abstract class AppRoutes {
                   pageBuilder: (context, state) => defaultPageBuilder(
                     context,
                     state,
-                    FluffyThemes.isColumnMode(context)
-                        ? const EmptyPage()
-                        : const Settings(),
+                    FluffyThemes.isColumnMode(context) ? const EmptyPage() : const Settings(),
                   ),
                   routes: [
                     GoRoute(

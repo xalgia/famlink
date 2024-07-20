@@ -21,43 +21,35 @@ class StartChatFloatingActionButton extends StatelessWidget {
   });
 
   void _onPressed(BuildContext context) async {
-    switch (activeFilter) {
-      case ActiveFilter.allChats:
-      case ActiveFilter.messages:
-        context.go('/rooms/newprivatechat');
-        break;
-      case ActiveFilter.groups:
-        context.go('/rooms/newgroup');
-        break;
-      case ActiveFilter.spaces:
-        createNewSpace();
-        break;
-    }
-  }
+    context.go('/dashboard/rooms');
+     }
 
   IconData get icon {
     switch (activeFilter) {
       case ActiveFilter.allChats:
-      case ActiveFilter.messages:
+      case ActiveFilter.unread:
         return Icons.add_outlined;
       case ActiveFilter.groups:
         return Icons.group_add_outlined;
       case ActiveFilter.spaces:
         return Icons.workspaces_outlined;
+      case ActiveFilter.messages:
+        return Icons.person_add_outlined;
     }
   }
 
   String getLabel(BuildContext context) {
     switch (activeFilter) {
       case ActiveFilter.allChats:
-      case ActiveFilter.messages:
-        return roomsIsEmpty
-            ? L10n.of(context)!.startFirstChat
-            : L10n.of(context)!.newChat;
+        return L10n.of(context)!.start;
+      case ActiveFilter.unread:
+        return L10n.of(context)!.start;
       case ActiveFilter.groups:
-        return L10n.of(context)!.newGroup;
+        return L10n.of(context)!.start;
       case ActiveFilter.spaces:
-        return L10n.of(context)!.newSpace;
+        return L10n.of(context)!.start;
+      case ActiveFilter.messages:
+        return L10n.of(context)!.start;
     }
   }
 
