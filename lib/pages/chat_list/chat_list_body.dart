@@ -375,39 +375,25 @@ class DashboardController extends State<Dashboard> {
     Logs().v('Loading timeline...');
     await Matrix.of(context).client.roomsLoading;
     await Matrix.of(context).client.accountDataLoading;
-    if (eventContextId != null && (!eventContextId.isValidMatrixId || eventContextId.sigil != '\$')) {
-      eventContextId = null;
-    }
-    final room = Matrix.of(context).client.rooms.firstWhere((element) => element.id == _rooms.first);
-    timeline = await room.getTimeline(
-      onUpdate: updateView,
-      onInsert: onInsert,
-    );
-    Logs().v('Loaded timeline without event ID ${timeline!.chunk.events.first.eventId}');
-    if (timeline?.chunk.events != null) {
-      List<Future<Timeline>> roomEvents = _rooms.map((e) async {
-        final room = Matrix.of(context).client.rooms.firstWhere((element) => element.id == e);
-        return await room.getTimeline(
-          onUpdate: updateView,
-          onInsert: onInsert,
-        );
-      }).toList();
+    List<Future<Timeline>> roomEvents = _rooms.map((e) async {
+      final room = Matrix.of(context).client.rooms.firstWhere((element) => element.id == e);
+      final timeline = await room.getTimeline();
+      return timeline;
+    }).toList();
 
-      for (var room in roomEvents) {
-        final timeline = await room;
-        if (timeline.chunk.events != null) {
-          events!.addAll(timeline.chunk.events);
-        }
+    final timelines = await Future.wait(roomEvents);
+
+    timelines.forEach((element) {
+      if (element.events.isNotEmpty) {
+        events = element.events;
+        events!.forEach((element) {
+          if(element.messageType =="m.audio") {
+            print('Audio message');
+            _downloadAction(element);
+          }
+        });
       }
-
-      events?.forEach((element) {
-        if (element.messageType == 'm.audio') {
-          _downloadAction(element);
-        }
-      });
-    }
-    timeline!.requestKeys(onlineKeyBackupOnly: false);
-    return;
+    });
   }
 
   void _showScrollUpMaterialBanner(String eventId) => setState(() {
@@ -482,8 +468,12 @@ class DashboardController extends State<Dashboard> {
               widget.controller.activeFilter.toString() +
               widget.controller.activeSpaceId.toString(),
         ),
-        stream: Matrix.of(context).client.onRoomState.stream.where((update) {
-          return publicRooms.contains(update.roomId);
+        stream: client.onSync.stream.where((s) {
+          if (s.hasRoomUpdate) {
+            print('Room update');
+            _getTimeline();
+          }
+          return s.hasRoomUpdate;
         }).rateLimit(const Duration(seconds: 1)),
         builder: (context, _) {
           return SafeArea(
@@ -491,22 +481,22 @@ class DashboardController extends State<Dashboard> {
               controller: widget.controller.scrollController,
               slivers: [
                 // ChatListHeader(controller: controller),
-                SliverList(
-                  delegate: SliverChildListDelegate(
-                    [
-                      if (client.prevBatch != null && _rooms.isEmpty && !widget.controller.isSearchMode) ...[
-                        Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Icon(
-                            CupertinoIcons.chat_bubble_2,
-                            size: 128,
-                            color: Theme.of(context).colorScheme.onInverseSurface,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                // SliverList(
+                //   delegate: SliverChildListDelegate(
+                //     [
+                //       if (client.prevBatch != null && _rooms.isEmpty && !widget.controller.isSearchMode) ...[
+                //         Padding(
+                //           padding: const EdgeInsets.all(32.0),
+                //           child: Icon(
+                //             CupertinoIcons.chat_bubble_2,
+                //             size: 128,
+                //             color: Theme.of(context).colorScheme.onInverseSurface,
+                //           ),
+                //         ),
+                //       ],
+                //     ],
+                //   ),
+                // ),
 
                 if (client.prevBatch != null)
                   SliverList.builder(

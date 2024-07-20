@@ -112,7 +112,17 @@ abstract class AppRoutes {
                     activeChat: state.pathParameters['roomid'],
                   ),
           ),
-          routes: [],
+          routes: [
+            GoRoute(
+              path: 'addToDashboard',
+              pageBuilder: (context, state) => defaultPageBuilder(
+                context,
+                state,
+                  NewPrivateChat(),
+              ),
+              redirect: loggedOutRedirect,
+            ),
+          ],
         ),
         GoRoute(
           path: '/rooms',
