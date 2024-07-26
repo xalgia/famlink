@@ -28,7 +28,9 @@ class FluffyChatApp extends StatelessWidget {
   });
   static bool gotInitialLink = false;
 
-  static final GoRouter router = GoRouter(routes: AppRoutes.routes , debugLogDiagnostics: true);
+  static final GoRouter router = GoRouter(
+    initialLocation: '/dashboard',
+      routes: AppRoutes.routes , debugLogDiagnostics: true);
 
 
   @override

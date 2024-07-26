@@ -87,7 +87,7 @@ class DashboardController extends State<Dashboard> {
   void initState() {
     super.initState();
     sendingClient = Matrix.of(context).client;
-    _getTimeline();
+    getTimeline();
     _loadRooms();
   }
 
@@ -206,6 +206,7 @@ class DashboardController extends State<Dashboard> {
   }
 
   void _playAction(Event event) async {
+    print("playing audio");
     final audioPlayer = this.audioPlayer ??= AudioPlayer();
     if (AudioPlayerWidget.currentId != event.eventId) {
       if (AudioPlayerWidget.currentId != null) {
@@ -263,7 +264,7 @@ class DashboardController extends State<Dashboard> {
         .rateLimit(const Duration(seconds: 1))
         .listen((update) {
           print("updated timelines");
-          _getTimeline();
+          getTimeline();
         });
     print('Subscribed to room state updates');
   }
@@ -369,33 +370,32 @@ class DashboardController extends State<Dashboard> {
     }
   }
 
-  Future<void> _getTimeline({
-    String? eventContextId,
-  }) async {
-    Logs().v('Loading timeline...');
-    await Matrix.of(context).client.roomsLoading;
-    await Matrix.of(context).client.accountDataLoading;
-    List<Future<Timeline>> roomEvents = _rooms.map((e) async {
-      final room = Matrix.of(context).client.rooms.firstWhere((element) => element.id == e);
-      final timeline = await room.getTimeline();
-      return timeline;
-    }).toList();
+  Future<void> getTimeline({
+  String? eventContextId,
+}) async {
+  Logs().v('Loading timeline...');
+  await Matrix.of(context).client.roomsLoading;
+  await Matrix.of(context).client.accountDataLoading;
 
-    final timelines = await Future.wait(roomEvents);
+  final List<Future<Timeline>> roomEvents = _rooms.map((roomId) async {
+    final room = Matrix.of(context).client.rooms.firstWhere((element) => element.id == roomId);
+    return await room.getTimeline();
+  }).toList();
 
-    timelines.forEach((element) {
-      if (element.events.isNotEmpty) {
-        events = element.events;
-        events!.forEach((element) {
-          if(element.messageType =="m.audio") {
-            print('Audio message');
-            _downloadAction(element);
-          }
-        });
+  final timelines = await Future.wait(roomEvents);
+
+  for (final timeline in timelines) {
+    if (timeline.events.isNotEmpty) {
+      events = timeline.events;
+      for (final event in events!) {
+        if (event.messageType == "m.audio") {
+          print('Audio message');
+          _downloadAction(event);
+        }
       }
-    });
+    }
   }
-
+}
   void _showScrollUpMaterialBanner(String eventId) => setState(() {
         scrollUpBannerEventId = eventId;
       });
@@ -434,11 +434,11 @@ class DashboardController extends State<Dashboard> {
         Matrix.of(context).client.rooms.firstWhere((element) => element.id == room),
       );
     }
-    List<GetEventsResponse> eventsListResponse = [];
+    final List<GetEventsResponse> eventsListResponse = [];
     final client = Matrix.of(context).client;
-    List<Room> eventsList = Matrix.of(context).client.rooms;
+    final List<Room> eventsList = Matrix.of(context).client.rooms;
     eventsList.forEach((element) async {
-      Direction idr = Direction.f;
+      final Direction idr = Direction.f;
       // GetRoomEventsResponse eventsListResponse = await client.getRoomEvents(element.id, idr);
       // eventsListResponse.chunk.forEach(
       //   (element) {
@@ -469,10 +469,8 @@ class DashboardController extends State<Dashboard> {
               widget.controller.activeSpaceId.toString(),
         ),
         stream: client.onSync.stream.where((s) {
-          if (s.hasRoomUpdate) {
-            print('Room update');
-            _getTimeline();
-          }
+          getTimeline();
+
           return s.hasRoomUpdate;
         }).rateLimit(const Duration(seconds: 1)),
         builder: (context, _) {
