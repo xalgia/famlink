@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fluffychat/pages/chat/chat_view.dart';
 import 'package:flutter/material.dart';
 
 import 'package:go_router/go_router.dart';
@@ -108,9 +109,7 @@ abstract class AppRoutes {
             state,
             FluffyThemes.isColumnMode(context)
                 ? const EmptyPage()
-                : DashboardList(
-                    activeChat: state.pathParameters['roomid'],
-                  ),
+                : DashboardPage()
           ),
           routes: [
             GoRoute(
