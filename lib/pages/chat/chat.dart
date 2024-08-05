@@ -17,7 +17,9 @@ import 'package:flutter_gen/gen_l10n/l10n.dart';
 import 'package:future_loading_dialog/future_loading_dialog.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:matrix/matrix.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,6 +41,7 @@ import 'package:fluffychat/widgets/matrix.dart';
 import '../../utils/account_bundles.dart';
 import '../../utils/localized_exception_extension.dart';
 import '../../utils/matrix_sdk_extensions/matrix_file_extension.dart';
+import 'events/audio_player.dart';
 import 'send_file_dialog.dart';
 import 'send_location_dialog.dart';
 
@@ -63,8 +66,7 @@ class ChatPage extends StatelessWidget {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child:
-                Text(L10n.of(context)!.youAreNoLongerParticipatingInThisChat),
+            child: Text(L10n.of(context)!.youAreNoLongerParticipatingInThisChat),
           ),
         ),
       );
@@ -95,8 +97,7 @@ class ChatPageWithRoom extends StatefulWidget {
   ChatController createState() => ChatController();
 }
 
-class ChatController extends State<ChatPageWithRoom>
-    with WidgetsBindingObserver {
+class ChatController extends State<ChatPageWithRoom> with WidgetsBindingObserver {
   Room get room => sendingClient.getRoomById(roomId) ?? widget.room;
 
   late Client sendingClient;
@@ -181,8 +182,7 @@ class ChatController extends State<ChatPageWithRoom>
 
   bool _scrolledUp = false;
 
-  bool get showScrollDownButton =>
-      _scrolledUp || timeline?.allowNewEvent == false;
+  bool get showScrollDownButton => _scrolledUp || timeline?.allowNewEvent == false;
 
   bool get selectMode => selectedEvents.isNotEmpty;
 
@@ -238,16 +238,14 @@ class ChatController extends State<ChatPageWithRoom>
       return;
     }
     if (!scrollController.hasClients) return;
-    if (timeline?.allowNewEvent == false ||
-        scrollController.position.pixels > 0 && _scrolledUp == false) {
+    if (timeline?.allowNewEvent == false || scrollController.position.pixels > 0 && _scrolledUp == false) {
       setState(() => _scrolledUp = true);
     } else if (scrollController.position.pixels <= 0 && _scrolledUp == true) {
       setState(() => _scrolledUp = false);
       setReadMarker();
     }
 
-    if (scrollController.position.pixels == 0 ||
-        scrollController.position.pixels == 64) {
+    if (scrollController.position.pixels == 0 || scrollController.position.pixels == 64) {
       requestFuture();
     }
   }
@@ -268,8 +266,7 @@ class ChatController extends State<ChatPageWithRoom>
     _loadDraft();
     super.initState();
     _displayChatDetailsColumn = ValueNotifier(
-      Matrix.of(context).store.getBool(SettingKeys.displayChatDetailsColumn) ??
-          false,
+      Matrix.of(context).store.getBool(SettingKeys.displayChatDetailsColumn) ?? false,
     );
 
     sendingClient = Matrix.of(context).client;
@@ -292,8 +289,7 @@ class ChatController extends State<ChatPageWithRoom>
         setReadMarker();
         return;
       }
-      if (timeline?.events.any((event) => event.eventId == fullyRead) ??
-          false) {
+      if (timeline?.events.any((event) => event.eventId == fullyRead) ?? false) {
         Logs().v('Scroll up to visible event', fullyRead);
         setReadMarker();
         return;
@@ -340,8 +336,7 @@ class ChatController extends State<ChatPageWithRoom>
   }) async {
     await Matrix.of(context).client.roomsLoading;
     await Matrix.of(context).client.accountDataLoading;
-    if (eventContextId != null &&
-        (!eventContextId.isValidMatrixId || eventContextId.sigil != '\$')) {
+    if (eventContextId != null && (!eventContextId.isValidMatrixId || eventContextId.sigil != '\$')) {
       eventContextId = null;
     }
     try {
@@ -382,16 +377,13 @@ class ChatController extends State<ChatPageWithRoom>
     if (_setReadMarkerFuture != null) return;
     if (_scrolledUp) return;
     if (scrollUpBannerEventId != null) return;
-    if (eventId == null &&
-        !room.hasNewMessages &&
-        room.notificationCount == 0) {
+    if (eventId == null && !room.hasNewMessages && room.notificationCount == 0) {
       return;
     }
 
     // Do not send read markers when app is not in foreground
     if (kIsWeb && !Matrix.of(context).webHasFocus) return;
-    if (!kIsWeb &&
-        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+    if (!kIsWeb && WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
       return;
     }
 
@@ -458,8 +450,7 @@ class ChatController extends State<ChatPageWithRoom>
     var parseCommands = true;
 
     final commandMatch = RegExp(r'^\/(\w+)').firstMatch(sendController.text);
-    if (commandMatch != null &&
-        !sendingClient.commands.keys.contains(commandMatch[1]!.toLowerCase())) {
+    if (commandMatch != null && !sendingClient.commands.keys.contains(commandMatch[1]!.toLowerCase())) {
       final l10n = L10n.of(context)!;
       final dialogResult = await showOkCancelAlertDialog(
         context: context,
@@ -688,9 +679,7 @@ class ChatController extends State<ChatPageWithRoom>
   String _getSelectedEventString() {
     var copyString = '';
     if (selectedEvents.length == 1) {
-      return selectedEvents.first
-          .getDisplayEvent(timeline!)
-          .calcLocalizedBodyFallback(MatrixLocals(L10n.of(context)!));
+      return selectedEvents.first.getDisplayEvent(timeline!).calcLocalizedBodyFallback(MatrixLocals(L10n.of(context)!));
     }
     for (final event in selectedEvents) {
       if (copyString.isNotEmpty) copyString += '\n\n';
@@ -841,8 +830,7 @@ class ChatController extends State<ChatPageWithRoom>
     final clients = Matrix.of(context).currentBundle;
     for (final event in selectedEvents) {
       if (!event.status.isSent) return false;
-      if (event.canRedact == false &&
-          !(clients!.any((cl) => event.senderId == cl!.userID))) return false;
+      if (event.canRedact == false && !(clients!.any((cl) => event.senderId == cl!.userID))) return false;
     }
     return true;
   }
@@ -858,19 +846,15 @@ class ChatController extends State<ChatPageWithRoom>
   }
 
   bool get canEditSelectedEvents {
-    if (isArchived ||
-        selectedEvents.length != 1 ||
-        !selectedEvents.first.status.isSent) {
+    if (isArchived || selectedEvents.length != 1 || !selectedEvents.first.status.isSent) {
       return false;
     }
-    return currentRoomBundle
-        .any((cl) => selectedEvents.first.senderId == cl!.userID);
+    return currentRoomBundle.any((cl) => selectedEvents.first.senderId == cl!.userID);
   }
 
   void forwardEventsAction() async {
     if (selectedEvents.length == 1) {
-      Matrix.of(context).shareContent =
-          selectedEvents.first.getDisplayEvent(timeline!).content;
+      Matrix.of(context).shareContent = selectedEvents.first.getDisplayEvent(timeline!).content;
     } else {
       Matrix.of(context).shareContent = {
         'msgtype': 'm.text',
@@ -886,9 +870,7 @@ class ChatController extends State<ChatPageWithRoom>
     if (event.status.isError) {
       event.sendAgain();
     }
-    final allEditEvents = event
-        .aggregatedEvents(timeline!, RelationshipTypes.edit)
-        .where((e) => e.status.isError);
+    final allEditEvents = event.aggregatedEvents(timeline!, RelationshipTypes.edit).where((e) => e.status.isError);
     for (final e in allEditEvents) {
       e.sendAgain();
     }
@@ -910,8 +892,7 @@ class ChatController extends State<ChatPageWithRoom>
         timeline = null;
         _scrolledUp = false;
         loadTimelineFuture = _getTimeline(eventContextId: eventId).onError(
-          ErrorReporter(context, 'Unable to load timeline after scroll to ID')
-              .onErrorCallback,
+          ErrorReporter(context, 'Unable to load timeline after scroll to ID').onErrorCallback,
         );
       });
       await loadTimelineFuture;
@@ -936,8 +917,7 @@ class ChatController extends State<ChatPageWithRoom>
         timeline = null;
         _scrolledUp = false;
         loadTimelineFuture = _getTimeline().onError(
-          ErrorReporter(context, 'Unable to load timeline after scroll down')
-              .onErrorCallback,
+          ErrorReporter(context, 'Unable to load timeline after scroll down').onErrorCallback,
         );
       });
       await loadTimelineFuture;
@@ -973,9 +953,8 @@ class ChatController extends State<ChatPageWithRoom>
     if (emoji == null) return;
     final text = sendController.text;
     final selection = sendController.selection;
-    final newText = sendController.text.isEmpty
-        ? emoji.emoji
-        : text.replaceRange(selection.start, selection.end, emoji.emoji);
+    final newText =
+        sendController.text.isEmpty ? emoji.emoji : text.replaceRange(selection.start, selection.end, emoji.emoji);
     sendController.value = TextEditingValue(
       text: newText,
       selection: TextSelection.collapsed(
@@ -1042,12 +1021,11 @@ class ChatController extends State<ChatPageWithRoom>
     setState(() {
       pendingText = sendController.text;
       editEvent = selectedEvents.first;
-      sendController.text =
-          editEvent!.getDisplayEvent(timeline!).calcLocalizedBodyFallback(
-                MatrixLocals(L10n.of(context)!),
-                withSenderNamePrefix: false,
-                hideReply: true,
-              );
+      sendController.text = editEvent!.getDisplayEvent(timeline!).calcLocalizedBodyFallback(
+            MatrixLocals(L10n.of(context)!),
+            withSenderNamePrefix: false,
+            hideReply: true,
+          );
       selectedEvents.clear();
     });
     inputFocus.requestFocus();
@@ -1058,10 +1036,7 @@ class ChatController extends State<ChatPageWithRoom>
         await showOkCancelAlertDialog(
           context: context,
           title: L10n.of(context)!.goToTheNewRoom,
-          message: room
-              .getState(EventTypes.RoomTombstone)!
-              .parsedTombstoneContent
-              .body,
+          message: room.getState(EventTypes.RoomTombstone)!.parsedTombstoneContent.body,
           okLabel: L10n.of(context)!.ok,
           cancelLabel: L10n.of(context)!.cancel,
         )) {
@@ -1070,10 +1045,7 @@ class ChatController extends State<ChatPageWithRoom>
     final result = await showFutureLoadingDialog(
       context: context,
       future: () => room.client.joinRoom(
-        room
-            .getState(EventTypes.RoomTombstone)!
-            .parsedTombstoneContent
-            .replacementRoom,
+        room.getState(EventTypes.RoomTombstone)!.parsedTombstoneContent.replacementRoom,
       ),
     );
     await showFutureLoadingDialog(
@@ -1152,8 +1124,7 @@ class ChatController extends State<ChatPageWithRoom>
       cancelLabel: L10n.of(context)!.cancel,
     );
     if (response == OkCancelResult.ok) {
-      final events = room.pinnedEventIds
-        ..removeWhere((oldEvent) => oldEvent == eventId);
+      final events = room.pinnedEventIds..removeWhere((oldEvent) => oldEvent == eventId);
       showFutureLoadingDialog(
         context: context,
         future: () => room.setPinnedEvents(events),
@@ -1164,8 +1135,7 @@ class ChatController extends State<ChatPageWithRoom>
   void pinEvent() {
     final pinnedEventIds = room.pinnedEventIds;
     final selectedEventIds = selectedEvents.map((e) => e.eventId).toSet();
-    final unpin = selectedEventIds.length == 1 &&
-        pinnedEventIds.contains(selectedEventIds.single);
+    final unpin = selectedEventIds.length == 1 && pinnedEventIds.contains(selectedEventIds.single);
     if (unpin) {
       pinnedEventIds.removeWhere(selectedEventIds.contains);
     } else {
@@ -1196,8 +1166,7 @@ class ChatController extends State<ChatPageWithRoom>
       final clients = currentRoomBundle;
       for (final client in clients) {
         final prefix = client!.sendPrefix;
-        if ((prefix.isNotEmpty) &&
-            text.toLowerCase() == '${prefix.toLowerCase()} ') {
+        if ((prefix.isNotEmpty) && text.toLowerCase() == '${prefix.toLowerCase()} ') {
           setSendingClient(client);
           setState(() {
             sendController.clear();
@@ -1229,11 +1198,9 @@ class ChatController extends State<ChatPageWithRoom>
 
   bool _inputTextIsEmpty = true;
 
-  bool get isArchived =>
-      {Membership.leave, Membership.ban}.contains(room.membership);
+  bool get isArchived => {Membership.leave, Membership.ban}.contains(room.membership);
 
-  void showEventInfo([Event? event]) =>
-      (event ?? selectedEvents.single).showInfoDialog(context);
+  void showEventInfo([Event? event]) => (event ?? selectedEvents.single).showInfoDialog(context);
 
   void onPhoneButtonTap() async {
     // VoIP required Android SDK 21
@@ -1372,16 +1339,28 @@ class AudioPageWithDashboard extends StatefulWidget {
   AudioPageWithDashboardController createState() => AudioPageWithDashboardController();
 }
 
-class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
-    with WidgetsBindingObserver {
+class AudioPageWithDashboardController extends State<AudioPageWithDashboard> with WidgetsBindingObserver {
   Room get room => sendingClient.getRoomById(roomId) ?? widget.room;
 
   late Client sendingClient;
 
   Timeline? timeline;
+  bool error = false;
+  String? _recordedPath;
+  final _audioRecorder = AudioRecorder();
+  final List<double> amplitudeTimeline = [];
+  AudioPlayerStatus status = AudioPlayerStatus.notDownloaded;
+  AudioPlayer? audioPlayer;
+  Event? replyEvent;
 
+  StreamSubscription? onAudioPositionChanged;
+  StreamSubscription? onDurationChanged;
+  StreamSubscription? onPlayerStateChanged;
+  StreamSubscription? onPlayerError;
   String? readMarkerEventId;
-
+  MatrixFile? matrixFile;
+  File? audioFile;
+  String pendingText = '';
   String get roomId => widget.room.id;
 
   final AutoScrollController scrollController = AutoScrollController();
@@ -1447,25 +1426,70 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
       }.contains(selectedEvents.single.messageType);
 
   void saveSelectedEvent(context) => selectedEvents.single.saveFile(context);
-
+  String? statusText;
+  int currentPosition = 0;
+  double maxPosition = 0;
   List<Event> selectedEvents = [];
 
   final Set<String> unfolded = {};
-
-  Event? replyEvent;
 
   Event? editEvent;
 
   bool _scrolledUp = false;
 
-  bool get showScrollDownButton =>
-      _scrolledUp || timeline?.allowNewEvent == false;
+  bool get showScrollDownButton => _scrolledUp || timeline?.allowNewEvent == false;
 
   bool get selectMode => selectedEvents.isNotEmpty;
 
   final int _loadHistoryCount = 100;
 
-  String pendingText = '';
+  Future<void> _playAction(Event event) async {
+    print("playing audio");
+    final audioPlayer = this.audioPlayer ??= AudioPlayer();
+    if (AudioPlayerWidget.currentId != event.eventId) {
+      if (AudioPlayerWidget.currentId != null) {
+        if (audioPlayer.playerState.playing) {
+          await audioPlayer.stop();
+          setState(() {});
+        }
+      }
+      AudioPlayerWidget.currentId = event.eventId;
+    }
+    if (audioPlayer.playerState.playing) {
+      await audioPlayer.pause();
+      return;
+    } else if (audioPlayer.position != Duration.zero) {
+      await audioPlayer.play();
+      return;
+    }
+
+    onAudioPositionChanged ??= audioPlayer.positionStream.listen((state) {
+      if (maxPosition <= 0) return;
+      setState(() {
+        statusText =
+            '${state.inMinutes.toString().padLeft(2, '0')}:${(state.inSeconds % 60).toString().padLeft(2, '0')}';
+        currentPosition = ((state.inMilliseconds.toDouble() / maxPosition) * AudioPlayerWidget.wavesCount).round();
+      });
+      if (state.inMilliseconds.toDouble() == maxPosition) {
+        audioPlayer.stop();
+        audioPlayer.seek(null);
+      }
+    });
+    onDurationChanged ??= audioPlayer.durationStream.listen((max) {
+      if (max == null || max == Duration.zero) return;
+      setState(() => maxPosition = max.inMilliseconds.toDouble());
+    });
+    onPlayerStateChanged ??= audioPlayer.playingStream.listen((_) => setState(() {}));
+    final audioFile = this.audioFile;
+    if (audioFile != null) {
+      audioPlayer.setFilePath(audioFile.path);
+    } else {
+      await audioPlayer.setAudioSource(MatrixFileAudioSource(matrixFile!));
+    }
+    audioPlayer.play().onError(
+          ErrorReporter(context, 'Unable to play audio message').onErrorCallback,
+        );
+  }
 
   bool showEmojiPicker = false;
 
@@ -1515,16 +1539,14 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
       return;
     }
     if (!scrollController.hasClients) return;
-    if (timeline?.allowNewEvent == false ||
-        scrollController.position.pixels > 0 && _scrolledUp == false) {
+    if (timeline?.allowNewEvent == false || scrollController.position.pixels > 0 && _scrolledUp == false) {
       setState(() => _scrolledUp = true);
     } else if (scrollController.position.pixels <= 0 && _scrolledUp == true) {
       setState(() => _scrolledUp = false);
       setReadMarker();
     }
 
-    if (scrollController.position.pixels == 0 ||
-        scrollController.position.pixels == 64) {
+    if (scrollController.position.pixels == 0 || scrollController.position.pixels == 64) {
       requestFuture();
     }
   }
@@ -1545,8 +1567,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
     _loadDraft();
     super.initState();
     _displayChatDetailsColumn = ValueNotifier(
-      Matrix.of(context).store.getBool(SettingKeys.displayChatDetailsColumn) ??
-          false,
+      Matrix.of(context).store.getBool(SettingKeys.displayChatDetailsColumn) ?? false,
     );
 
     sendingClient = Matrix.of(context).client;
@@ -1569,8 +1590,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
         setReadMarker();
         return;
       }
-      if (timeline?.events.any((event) => event.eventId == fullyRead) ??
-          false) {
+      if (timeline?.events.any((event) => event.eventId == fullyRead) ?? false) {
         Logs().v('Scroll up to visible event', fullyRead);
         setReadMarker();
         return;
@@ -1612,13 +1632,48 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
     animateInEventIndex = i;
   }
 
+  Future<void> _downloadAction(Event event) async {
+    if (status != AudioPlayerStatus.notDownloaded) return;
+    setState(() => status = AudioPlayerStatus.downloading);
+
+    try {
+      final matrixFile = await event.downloadAndDecryptAttachment();
+      File? file;
+
+      if (!kIsWeb) {
+        final tempDir = await getTemporaryDirectory();
+        final fileName = Uri.encodeComponent(
+          event.attachmentOrThumbnailMxcUrl()!.pathSegments.last,
+        );
+        file = File('${tempDir.path}/${fileName}_${matrixFile.name}');
+        await file.writeAsBytes(matrixFile.bytes);
+      }
+
+      setState(() {
+        audioFile = file;
+        this.matrixFile = matrixFile;
+        status = AudioPlayerStatus.downloaded;
+      });
+      Logs().v('Audio file downloaded');
+      Logs().v('Playing audio file...');
+      await _playAction(event);
+    } catch (e, s) {
+      Logs().v('Could not download audio file', e, s);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toLocalizedString(context)),
+        ),
+      );
+    }
+  }
+
   Future<void> _getTimeline({
     String? eventContextId,
-  }) async {
+  }) async
+  {
     await Matrix.of(context).client.roomsLoading;
     await Matrix.of(context).client.accountDataLoading;
-    if (eventContextId != null &&
-        (!eventContextId.isValidMatrixId || eventContextId.sigil != '\$')) {
+    if (eventContextId != null && (!eventContextId.isValidMatrixId || eventContextId.sigil != '\$')) {
       eventContextId = null;
     }
     try {
@@ -1634,6 +1689,15 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
         onUpdate: updateView,
         onInsert: onInsert,
       );
+      final List<Event> events = timeline!.events;
+      final latestAudioEvent = events.lastWhere(
+        (event) => event.messageType == "m.audio",
+      );
+
+      if (latestAudioEvent != null) {
+        await _downloadAction(latestAudioEvent);
+      }
+
       if (!mounted) return;
       if (e is TimeoutException || e is IOException) {
         _showScrollUpMaterialBanner(eventContextId!);
@@ -1655,20 +1719,18 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
 
   Future<void>? _setReadMarkerFuture;
 
-  void setReadMarker({String? eventId}) {
+  void setReadMarker({String? eventId})
+  {
     if (_setReadMarkerFuture != null) return;
     if (_scrolledUp) return;
     if (scrollUpBannerEventId != null) return;
-    if (eventId == null &&
-        !room.hasNewMessages &&
-        room.notificationCount == 0) {
+    if (eventId == null && !room.hasNewMessages && room.notificationCount == 0) {
       return;
     }
 
     // Do not send read markers when app is not in foreground
     if (kIsWeb && !Matrix.of(context).webHasFocus) return;
-    if (!kIsWeb &&
-        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+    if (!kIsWeb && WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
       return;
     }
 
@@ -1691,7 +1753,8 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
   }
 
   @override
-  void dispose() {
+  void dispose()
+  {
     timeline?.cancelSubscriptions();
     timeline = null;
     inputFocus.removeListener(_inputFocusListener);
@@ -1701,7 +1764,8 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
 
   TextEditingController sendController = TextEditingController();
 
-  void setSendingClient(Client c) {
+  void setSendingClient(Client c)
+  {
     // first cancel typing with the old sending client
     if (currentlyTyping) {
       // no need to have the setting typing to false be blocking
@@ -1723,11 +1787,13 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
     setState(() => sendingClient = c);
   }
 
-  void setActiveClient(Client c) => setState(() {
+  void setActiveClient(Client c) => setState(()
+  {
         Matrix.of(context).setActiveClient(c);
       });
 
-  Future<void> send() async {
+  Future<void> send() async
+  {
     if (sendController.text.trim().isEmpty) return;
     _storeInputTimeoutTimer?.cancel();
     final prefs = await SharedPreferences.getInstance();
@@ -1735,8 +1801,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
     var parseCommands = true;
 
     final commandMatch = RegExp(r'^\/(\w+)').firstMatch(sendController.text);
-    if (commandMatch != null &&
-        !sendingClient.commands.keys.contains(commandMatch[1]!.toLowerCase())) {
+    if (commandMatch != null && !sendingClient.commands.keys.contains(commandMatch[1]!.toLowerCase())) {
       final l10n = L10n.of(context)!;
       final dialogResult = await showOkCancelAlertDialog(
         context: context,
@@ -1965,9 +2030,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
   String _getSelectedEventString() {
     var copyString = '';
     if (selectedEvents.length == 1) {
-      return selectedEvents.first
-          .getDisplayEvent(timeline!)
-          .calcLocalizedBodyFallback(MatrixLocals(L10n.of(context)!));
+      return selectedEvents.first.getDisplayEvent(timeline!).calcLocalizedBodyFallback(MatrixLocals(L10n.of(context)!));
     }
     for (final event in selectedEvents) {
       if (copyString.isNotEmpty) copyString += '\n\n';
@@ -2118,8 +2181,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
     final clients = Matrix.of(context).currentBundle;
     for (final event in selectedEvents) {
       if (!event.status.isSent) return false;
-      if (event.canRedact == false &&
-          !(clients!.any((cl) => event.senderId == cl!.userID))) return false;
+      if (event.canRedact == false && !(clients!.any((cl) => event.senderId == cl!.userID))) return false;
     }
     return true;
   }
@@ -2135,19 +2197,15 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
   }
 
   bool get canEditSelectedEvents {
-    if (isArchived ||
-        selectedEvents.length != 1 ||
-        !selectedEvents.first.status.isSent) {
+    if (isArchived || selectedEvents.length != 1 || !selectedEvents.first.status.isSent) {
       return false;
     }
-    return currentRoomBundle
-        .any((cl) => selectedEvents.first.senderId == cl!.userID);
+    return currentRoomBundle.any((cl) => selectedEvents.first.senderId == cl!.userID);
   }
 
   void forwardEventsAction() async {
     if (selectedEvents.length == 1) {
-      Matrix.of(context).shareContent =
-          selectedEvents.first.getDisplayEvent(timeline!).content;
+      Matrix.of(context).shareContent = selectedEvents.first.getDisplayEvent(timeline!).content;
     } else {
       Matrix.of(context).shareContent = {
         'msgtype': 'm.text',
@@ -2163,9 +2221,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
     if (event.status.isError) {
       event.sendAgain();
     }
-    final allEditEvents = event
-        .aggregatedEvents(timeline!, RelationshipTypes.edit)
-        .where((e) => e.status.isError);
+    final allEditEvents = event.aggregatedEvents(timeline!, RelationshipTypes.edit).where((e) => e.status.isError);
     for (final e in allEditEvents) {
       e.sendAgain();
     }
@@ -2187,8 +2243,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
         timeline = null;
         _scrolledUp = false;
         loadTimelineFuture = _getTimeline(eventContextId: eventId).onError(
-          ErrorReporter(context, 'Unable to load timeline after scroll to ID')
-              .onErrorCallback,
+          ErrorReporter(context, 'Unable to load timeline after scroll to ID').onErrorCallback,
         );
       });
       await loadTimelineFuture;
@@ -2213,8 +2268,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
         timeline = null;
         _scrolledUp = false;
         loadTimelineFuture = _getTimeline().onError(
-          ErrorReporter(context, 'Unable to load timeline after scroll down')
-              .onErrorCallback,
+          ErrorReporter(context, 'Unable to load timeline after scroll down').onErrorCallback,
         );
       });
       await loadTimelineFuture;
@@ -2250,9 +2304,8 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
     if (emoji == null) return;
     final text = sendController.text;
     final selection = sendController.selection;
-    final newText = sendController.text.isEmpty
-        ? emoji.emoji
-        : text.replaceRange(selection.start, selection.end, emoji.emoji);
+    final newText =
+        sendController.text.isEmpty ? emoji.emoji : text.replaceRange(selection.start, selection.end, emoji.emoji);
     sendController.value = TextEditingValue(
       text: newText,
       selection: TextSelection.collapsed(
@@ -2319,12 +2372,11 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
     setState(() {
       pendingText = sendController.text;
       editEvent = selectedEvents.first;
-      sendController.text =
-          editEvent!.getDisplayEvent(timeline!).calcLocalizedBodyFallback(
-                MatrixLocals(L10n.of(context)!),
-                withSenderNamePrefix: false,
-                hideReply: true,
-              );
+      sendController.text = editEvent!.getDisplayEvent(timeline!).calcLocalizedBodyFallback(
+            MatrixLocals(L10n.of(context)!),
+            withSenderNamePrefix: false,
+            hideReply: true,
+          );
       selectedEvents.clear();
     });
     inputFocus.requestFocus();
@@ -2335,10 +2387,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
         await showOkCancelAlertDialog(
           context: context,
           title: L10n.of(context)!.goToTheNewRoom,
-          message: room
-              .getState(EventTypes.RoomTombstone)!
-              .parsedTombstoneContent
-              .body,
+          message: room.getState(EventTypes.RoomTombstone)!.parsedTombstoneContent.body,
           okLabel: L10n.of(context)!.ok,
           cancelLabel: L10n.of(context)!.cancel,
         )) {
@@ -2347,10 +2396,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
     final result = await showFutureLoadingDialog(
       context: context,
       future: () => room.client.joinRoom(
-        room
-            .getState(EventTypes.RoomTombstone)!
-            .parsedTombstoneContent
-            .replacementRoom,
+        room.getState(EventTypes.RoomTombstone)!.parsedTombstoneContent.replacementRoom,
       ),
     );
     await showFutureLoadingDialog(
@@ -2429,8 +2475,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
       cancelLabel: L10n.of(context)!.cancel,
     );
     if (response == OkCancelResult.ok) {
-      final events = room.pinnedEventIds
-        ..removeWhere((oldEvent) => oldEvent == eventId);
+      final events = room.pinnedEventIds..removeWhere((oldEvent) => oldEvent == eventId);
       showFutureLoadingDialog(
         context: context,
         future: () => room.setPinnedEvents(events),
@@ -2441,8 +2486,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
   void pinEvent() {
     final pinnedEventIds = room.pinnedEventIds;
     final selectedEventIds = selectedEvents.map((e) => e.eventId).toSet();
-    final unpin = selectedEventIds.length == 1 &&
-        pinnedEventIds.contains(selectedEventIds.single);
+    final unpin = selectedEventIds.length == 1 && pinnedEventIds.contains(selectedEventIds.single);
     if (unpin) {
       pinnedEventIds.removeWhere(selectedEventIds.contains);
     } else {
@@ -2473,8 +2517,7 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
       final clients = currentRoomBundle;
       for (final client in clients) {
         final prefix = client!.sendPrefix;
-        if ((prefix.isNotEmpty) &&
-            text.toLowerCase() == '${prefix.toLowerCase()} ') {
+        if ((prefix.isNotEmpty) && text.toLowerCase() == '${prefix.toLowerCase()} ') {
           setSendingClient(client);
           setState(() {
             sendController.clear();
@@ -2506,11 +2549,9 @@ class AudioPageWithDashboardController extends State<AudioPageWithDashboard>
 
   bool _inputTextIsEmpty = true;
 
-  bool get isArchived =>
-      {Membership.leave, Membership.ban}.contains(room.membership);
+  bool get isArchived => {Membership.leave, Membership.ban}.contains(room.membership);
 
-  void showEventInfo([Event? event]) =>
-      (event ?? selectedEvents.single).showInfoDialog(context);
+  void showEventInfo([Event? event]) => (event ?? selectedEvents.single).showInfoDialog(context);
 
   void onPhoneButtonTap() async {
     // VoIP required Android SDK 21
@@ -2608,31 +2649,33 @@ class _DashboardPageState extends State<DashboardPage> {
     final List<Room> publicRooms = [];
     for (var room in _rooms) {
       publicRooms.add(
-        Matrix.of(context)
-            .client
-            .rooms
-            .firstWhere((element) => element.id == room),
+        Matrix.of(context).client.rooms.firstWhere((element) => element.id == room),
       );
     }
     return Scaffold(
-      appBar: AppBar(title: Text('Dashboard'), actions: [
-        IconButton(
+        floatingActionButton: FloatingActionButton(
           onPressed: () {
-            context.go('/dashboard/addToDashboard');
+            context.go('/rooms');
           },
-          icon: const Icon(Icons.add),
+          child: const Icon(Icons.home),
         ),
-      ]),
-      body: SafeArea(
-  child: publicRooms.isEmpty
-      ? Center(child: Text('No rooms available'))
-      : ListView.builder(
-          itemCount: publicRooms.length,
-          itemBuilder: (BuildContext context, int i) {
-            return AudioPageWithDashboard(room: publicRooms[i]);
-          },
-        ),
-)
-    );
+        appBar: AppBar(title: Text('Dashboard'), actions: [
+          IconButton(
+            onPressed: () {
+              context.go('/dashboard/addToDashboard');
+            },
+            icon: const Icon(Icons.add),
+          ),
+        ]),
+        body: SafeArea(
+          child: publicRooms.isEmpty
+              ? Center(child: Text('No rooms available'))
+              : ListView.builder(
+                  itemCount: publicRooms.length,
+                  itemBuilder: (BuildContext context, int i) {
+                    return AudioPageWithDashboard(room: publicRooms[i]);
+                  },
+                ),
+        ));
   }
 }

@@ -3,10 +3,12 @@ import 'dart:io';
 
 import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:fluffychat/main.dart';
 import 'package:fluffychat/pages/chat/events/audio_player.dart';
 import 'package:fluffychat/pages/chat/recording_dialog.dart';
 import 'package:fluffychat/utils/error_reporter.dart';
 import 'package:fluffychat/utils/localized_exception_extension.dart';
+import 'package:fluffychat/utils/matrix_sdk_extensions/filtered_timeline_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/flutter_matrix_dart_sdk_database/cipher.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
 import 'package:flutter/foundation.dart';
@@ -109,22 +111,6 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Future<void>? loadTimelineFuture;
-  void _updateScrollController() {
-    if (!mounted) {
-      return;
-    }
-    if (!scrollController.hasClients) return;
-    if (timeline?.allowNewEvent == false || scrollController.position.pixels > 0 && _scrolledUp == false) {
-      setState(() => _scrolledUp = true);
-    } else if (scrollController.position.pixels <= 0 && _scrolledUp == true) {
-      setState(() => _scrolledUp = false);
-      setReadMarker();
-    }
-
-    if (scrollController.position.pixels == 0 || scrollController.position.pixels == 64) {
-      requestFuture();
-    }
-  }
 
   Future<void> _loadRooms() async {
     final rooms = await UserPreferences.getRooms();
@@ -136,6 +122,7 @@ class _DashboardViewState extends State<DashboardView> {
       _rooms = rooms;
     });
   }
+
   Future<void> startRecording() async {
     setState(() {
       _isRecording = true;
@@ -143,7 +130,7 @@ class _DashboardViewState extends State<DashboardView> {
     try {
       final tempDir = await getTemporaryDirectory();
       final path = _recordedPath =
-      '${tempDir.path}/recording${DateTime.now().microsecondsSinceEpoch}.${RecordingDialog.recordingFileType}';
+          '${tempDir.path}/recording${DateTime.now().microsecondsSinceEpoch}.${RecordingDialog.recordingFileType}';
 
       final result = await _audioRecorder.hasPermission();
       if (result != true) {
@@ -249,7 +236,7 @@ class _DashboardViewState extends State<DashboardView> {
     });
   }
 
-  void _playAction(Event event) async {
+  Future<void> _playAction(Event event) async {
     print("playing audio");
     final audioPlayer = this.audioPlayer ??= AudioPlayer();
     if (AudioPlayerWidget.currentId != event.eventId) {
@@ -273,7 +260,7 @@ class _DashboardViewState extends State<DashboardView> {
       if (maxPosition <= 0) return;
       setState(() {
         statusText =
-        '${state.inMinutes.toString().padLeft(2, '0')}:${(state.inSeconds % 60).toString().padLeft(2, '0')}';
+            '${state.inMinutes.toString().padLeft(2, '0')}:${(state.inSeconds % 60).toString().padLeft(2, '0')}';
         currentPosition = ((state.inMilliseconds.toDouble() / maxPosition) * AudioPlayerWidget.wavesCount).round();
       });
       if (state.inMilliseconds.toDouble() == maxPosition) {
@@ -293,12 +280,9 @@ class _DashboardViewState extends State<DashboardView> {
       await audioPlayer.setAudioSource(MatrixFileAudioSource(matrixFile!));
     }
     audioPlayer.play().onError(
-      ErrorReporter(context, 'Unable to play audio message').onErrorCallback,
-    );
+          ErrorReporter(context, 'Unable to play audio message').onErrorCallback,
+        );
   }
-
-
-
 
   Future<void>? _setReadMarkerFuture;
   bool _scrolledUp = false;
@@ -329,6 +313,7 @@ class _DashboardViewState extends State<DashboardView> {
   Future<void> _downloadAction(Event event) async {
     if (status != AudioPlayerStatus.notDownloaded) return;
     setState(() => status = AudioPlayerStatus.downloading);
+
     try {
       final matrixFile = await event.downloadAndDecryptAttachment();
       File? file;
@@ -347,7 +332,9 @@ class _DashboardViewState extends State<DashboardView> {
         this.matrixFile = matrixFile;
         status = AudioPlayerStatus.downloaded;
       });
-      _playAction(event);
+      Logs().v('Audio file downloaded');
+      Logs().v('Playing audio file...');
+      await _playAction(event);
     } catch (e, s) {
       Logs().v('Could not download audio file', e, s);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -360,33 +347,49 @@ class _DashboardViewState extends State<DashboardView> {
 
   Future<void> getTimeline({
     String? eventContextId,
-  }) async {
-    Logs().v('Loading timeline...');
+  }) async
+  {
     await Matrix.of(context).client.roomsLoading;
     await Matrix.of(context).client.accountDataLoading;
+    if (eventContextId != null && (!eventContextId.isValidMatrixId || eventContextId.sigil != '\$')) {
+      eventContextId = null;
+    }
+    try {
+      timeline = await widget.controller.room.getTimeline(
+        onUpdate: updateView,
+        eventContextId: eventContextId,
+        onInsert: onInsert,
+      );
+      events = timeline?.events;
+      for (var event in events!) {
+        if (event.messageType == 'm.audio') {
+          Logs().v('Audio message found');
 
-    final List<Future<Timeline>> roomEvents = _rooms.map((roomId) async {
-      final room = Matrix.of(context).client.rooms.firstWhere((element) => element.id == roomId);
-      return await room.getTimeline();
-    }).toList();
-
-    final timelines = await Future.wait(roomEvents);
-
-    for (final timeline in timelines) {
-      if (timeline.events.isNotEmpty) {
-        events = timeline.events;
-        for (final event in events!) {
-          if (event.messageType == "m.audio") {
-            print('Audio message');
-            _downloadAction(event);
-          }
+          await _downloadAction(event);
         }
       }
+    } catch (e, s) {
+      Logs().w('Unable to load timeline on event ID $eventContextId', e, s);
+      if (!mounted) return;
+      timeline = await widget.controller.room.getTimeline(
+        onUpdate: updateView,
+        onInsert: onInsert,
+      );
+      if (!mounted) return;
+      if (e is TimeoutException || e is IOException) {
+        _showScrollUpMaterialBanner(eventContextId!);
+      }
     }
+    timeline!.requestKeys(onlineKeyBackupOnly: false);
+    timeline!.requestKeys(onlineKeyBackupOnly: false);
+    if (widget.controller.room.markedUnread) widget.controller.room.markUnread(false);
+
+    return;
   }
+
   void _showScrollUpMaterialBanner(String eventId) => setState(() {
-    scrollUpBannerEventId = eventId;
-  });
+        scrollUpBannerEventId = eventId;
+      });
   void _stopAndSend(Room room) async {
     _recorderSubscription?.cancel();
 
@@ -413,179 +416,113 @@ class _DashboardViewState extends State<DashboardView> {
     voiceMessageAction(room, result);
   }
 
-  List<Widget> _appBarActions(BuildContext context) {
-    if (widget.controller.selectMode) {
-      return [
-        if (widget.controller.canEditSelectedEvents)
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: L10n.of(context)!.edit,
-            onPressed: widget.controller.editSelectedEventAction,
-          ),
-        IconButton(
-          icon: const Icon(Icons.copy_outlined),
-          tooltip: L10n.of(context)!.copy,
-          onPressed: widget.controller.copyEventsAction,
-        ),
-        if (widget.controller.canSaveSelectedEvent)
-          // Use builder context to correctly position the share dialog on iPad
-          Builder(
-            builder: (context) => IconButton(
-              icon: Icon(Icons.adaptive.share),
-              tooltip: L10n.of(context)!.share,
-              onPressed: () => widget.controller.saveSelectedEvent(context),
-            ),
-          ),
-        if (widget.controller.canPinSelectedEvents)
-          IconButton(
-            icon: const Icon(Icons.push_pin_outlined),
-            onPressed: widget.controller.pinEvent,
-            tooltip: L10n.of(context)!.pinMessage,
-          ),
-        if (widget.controller.canRedactSelectedEvents)
-          IconButton(
-            icon: const Icon(Icons.delete_outlined),
-            tooltip: L10n.of(context)!.redactMessage,
-            onPressed: widget.controller.redactEventsAction,
-          ),
-        if (widget.controller.selectedEvents.length == 1)
-          PopupMenuButton<_EventContextAction>(
-            onSelected: (action) {
-              switch (action) {
-                case _EventContextAction.info:
-                  widget.controller.showEventInfo();
-                  widget.controller.clearSelectedEvents();
-                  break;
-                case _EventContextAction.report:
-                  widget.controller.reportEventAction();
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: _EventContextAction.info,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.info_outlined),
-                    const SizedBox(width: 12),
-                    Text(L10n.of(context)!.messageInfo),
-                  ],
-                ),
-              ),
-              if (widget.controller.selectedEvents.single.status.isSent)
-                PopupMenuItem(
-                  value: _EventContextAction.report,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.shield_outlined,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(L10n.of(context)!.reportMessage),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-      ];
-    } else if (!widget.controller.room.isArchived) {
-      return [
-        if (Matrix.of(context).voipPlugin != null &&
-            widget.controller.room.isDirectChat)
-          IconButton(
-            onPressed: widget.controller.onPhoneButtonTap,
-            icon: const Icon(Icons.call_outlined),
-            tooltip: L10n.of(context)!.placeCall,
-          ),
-        EncryptionButton(widget.controller.room),
-        ChatSettingsPopupMenu(widget.controller.room, true),
-      ];
-    }
-    return [];
-  }
-
   @override
   Widget build(BuildContext context) {
+    final events = widget.controller.timeline!.events
+        .where((event) => event.isVisibleInGui)
+        .toList();
+Logs().v('Building chat view');
+    _downloadAction(events.first);
 
-
-    if (widget.controller.room.membership == Membership.invite) {
-      showFutureLoadingDialog(
-        context: context,
-        future: () => widget.controller.room.join(),
-      );
+    final thisEventsKeyMap = <String, int>{};
+    for (var i = 0; i < events.length; i++) {
+      thisEventsKeyMap[events[i].eventId] = i;
     }
 
-    final bottomSheetPadding = FluffyThemes.isColumnMode(context) ? 16.0 : 8.0;
+
+
+
+
     final scrollUpBannerEventId = widget.controller.scrollUpBannerEventId;
 
-    final accountConfig = Matrix.of(context).client.applicationAccountConfig;
     final List<Room> publicRooms = [];
     for (var room in _rooms) {
       publicRooms.add(
         Matrix.of(context).client.rooms.firstWhere((element) => element.id == room),
       );
     }
-    final List<GetEventsResponse> eventsListResponse = [];
-    final client = Matrix.of(context).client;
-    final List<Room> eventsList = Matrix.of(context).client.rooms;
     return StreamBuilder(
       stream: widget.controller.room.client.onRoomState.stream
           .where((update) => update.roomId == widget.controller.room.id)
           .rateLimit(const Duration(seconds: 1)),
-      builder: (context, snapshot) => FutureBuilder(
-        future: widget.controller.loadTimelineFuture,
-        builder: (BuildContext context, snapshot) {
-          var appbarBottomHeight = 0.0;
-          if (widget.controller.room.pinnedEventIds.isNotEmpty) {
-            appbarBottomHeight += 42;
-          }
-          if (scrollUpBannerEventId != null) {
-            appbarBottomHeight += 42;
-          }
-          final tombstoneEvent =
-              widget.controller.room.getState(EventTypes.RoomTombstone);
-          if (tombstoneEvent != null) {
-            appbarBottomHeight += 42;
-          }
-          return GestureDetector(
-                    onTapUp: (details) {
-                      setState(() {
-                        _isRecording = false;
-                      });
-                      _stopAndSend(widget.controller.room);
-                    },
-                    onTapDown: (details) {
-                      startRecording();
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.secondaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ListTile(
-                          shape: RoundedRectangleBorder(),
-                          subtitle: (_isRecording) ? Text('Recording...') : null,
-                          leading: const Icon(Icons.mic),
-                          title: Text(
-                            widget.controller.room.displayname,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          )),
-                    ),
-                  );
-        },
-      ),
+      builder: (context, snapshot) {
+        Logs().v('Building chat view');
+        sendingClient = Matrix.of(context).client;
+        getTimeline();
+
+        return FutureBuilder(
+          future: widget.controller.loadTimelineFuture,
+          builder: (BuildContext context, snapshot) {
+            var appbarBottomHeight = 0.0;
+            if (widget.controller.room.pinnedEventIds.isNotEmpty) {
+              appbarBottomHeight += 42;
+            }
+            if (scrollUpBannerEventId != null) {
+              appbarBottomHeight += 42;
+            }
+            final tombstoneEvent = widget.controller.room.getState(EventTypes.RoomTombstone);
+            if (tombstoneEvent != null) {
+              appbarBottomHeight += 42;
+              getTimeline();
+            }
+            return GestureDetector(
+              onTapUp: (details) {
+                setState(() {
+                  _isRecording = false;
+                });
+                _stopAndSend(widget.controller.room);
+              },
+              onTapDown: (details) {
+                startRecording();
+              },
+              child: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ListTile(
+                    shape: RoundedRectangleBorder(),
+                    subtitle: (_isRecording) ? Text('Recording...') : null,
+                    leading: const Icon(Icons.mic),
+                    title: Text(
+                      widget.controller.room.directChatMatrixID.toString(),
+                      style: Theme.of(context).textTheme.titleLarge,
+                    )),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
 
-
-
-
 // enum _EventContextAction { info, report }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class ChatView extends StatelessWidget {
   final ChatController controller;
@@ -607,7 +544,7 @@ class ChatView extends StatelessWidget {
           onPressed: controller.copyEventsAction,
         ),
         if (controller.canSaveSelectedEvent)
-        // Use builder context to correctly position the share dialog on iPad
+          // Use builder context to correctly position the share dialog on iPad
           Builder(
             builder: (context) => IconButton(
               icon: Icon(Icons.adaptive.share),
@@ -672,8 +609,7 @@ class ChatView extends StatelessWidget {
       ];
     } else if (!controller.room.isArchived) {
       return [
-        if (Matrix.of(context).voipPlugin != null &&
-            controller.room.isDirectChat)
+        if (Matrix.of(context).voipPlugin != null && controller.room.isDirectChat)
           IconButton(
             onPressed: controller.onPhoneButtonTap,
             icon: const Icon(Icons.call_outlined),
@@ -723,30 +659,27 @@ class ChatView extends StatelessWidget {
             if (scrollUpBannerEventId != null) {
               appbarBottomHeight += 42;
             }
-            final tombstoneEvent =
-            controller.room.getState(EventTypes.RoomTombstone);
+            final tombstoneEvent = controller.room.getState(EventTypes.RoomTombstone);
             if (tombstoneEvent != null) {
               appbarBottomHeight += 42;
             }
             return Scaffold(
               appBar: AppBar(
                 actionsIconTheme: IconThemeData(
-                  color: controller.selectedEvents.isEmpty
-                      ? null
-                      : Theme.of(context).colorScheme.primary,
+                  color: controller.selectedEvents.isEmpty ? null : Theme.of(context).colorScheme.primary,
                 ),
                 leading: controller.selectMode
                     ? IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: controller.clearSelectedEvents,
-                  tooltip: L10n.of(context)!.close,
-                  color: Theme.of(context).colorScheme.primary,
-                )
+                        icon: const Icon(Icons.close),
+                        onPressed: controller.clearSelectedEvents,
+                        tooltip: L10n.of(context)!.close,
+                        color: Theme.of(context).colorScheme.primary,
+                      )
                     : UnreadRoomsBadge(
-                  filter: (r) => r.id != controller.roomId,
-                  badgePosition: BadgePosition.topEnd(end: 8, top: 4),
-                  child: const Center(child: BackButton()),
-                ),
+                        filter: (r) => r.id != controller.roomId,
+                        badgePosition: BadgePosition.topEnd(end: 8, top: 4),
+                        child: const Center(child: BackButton()),
+                      ),
                 titleSpacing: 0,
                 title: ChatAppBarTitle(controller),
                 actions: _appBarActions(context),
@@ -771,8 +704,7 @@ class ChatView extends StatelessWidget {
                       if (scrollUpBannerEventId != null)
                         ChatAppBarListTile(
                           leading: IconButton(
-                            color:
-                            Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             icon: const Icon(Icons.close),
                             tooltip: L10n.of(context)!.close,
                             onPressed: () {
@@ -795,17 +727,16 @@ class ChatView extends StatelessWidget {
                   ),
                 ),
               ),
-              floatingActionButton: controller.showScrollDownButton &&
-                  controller.selectedEvents.isEmpty
+              floatingActionButton: controller.showScrollDownButton && controller.selectedEvents.isEmpty
                   ? Padding(
-                padding: const EdgeInsets.only(bottom: 56.0),
-                child: FloatingActionButton(
-                  onPressed: controller.scrollDown,
-                  heroTag: null,
-                  mini: true,
-                  child: const Icon(Icons.arrow_downward_outlined),
-                ),
-              )
+                      padding: const EdgeInsets.only(bottom: 56.0),
+                      child: FloatingActionButton(
+                        onPressed: controller.scrollDown,
+                        heroTag: null,
+                        mini: true,
+                        child: const Icon(Icons.arrow_downward_outlined),
+                      ),
+                    )
                   : null,
               body: DropTarget(
                 onDragDone: controller.onDragDone,
@@ -847,8 +778,7 @@ class ChatView extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (controller.room.canSendDefaultMessages &&
-                              controller.room.membership == Membership.join)
+                          if (controller.room.canSendDefaultMessages && controller.room.membership == Membership.join)
                             Container(
                               margin: EdgeInsets.only(
                                 bottom: bottomSheetPadding,
@@ -863,59 +793,56 @@ class ChatView extends StatelessWidget {
                                 clipBehavior: Clip.hardEdge,
                                 color: Theme.of(context)
                                     .colorScheme
-                                // ignore: deprecated_member_use
+                                    // ignore: deprecated_member_use
                                     .surfaceVariant,
                                 borderRadius: const BorderRadius.all(
                                   Radius.circular(24),
                                 ),
                                 child: controller.room.isAbandonedDMRoom == true
                                     ? Row(
-                                  mainAxisAlignment:
-                                  MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    TextButton.icon(
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.all(
-                                          16,
-                                        ),
-                                        foregroundColor: Theme.of(context)
-                                            .colorScheme
-                                            .error,
-                                      ),
-                                      icon: const Icon(
-                                        Icons.archive_outlined,
-                                      ),
-                                      onPressed: controller.leaveChat,
-                                      label: Text(
-                                        L10n.of(context)!.leave,
-                                      ),
-                                    ),
-                                    TextButton.icon(
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.all(
-                                          16,
-                                        ),
-                                      ),
-                                      icon: const Icon(
-                                        Icons.forum_outlined,
-                                      ),
-                                      onPressed: controller.recreateChat,
-                                      label: Text(
-                                        L10n.of(context)!.reopenChat,
-                                      ),
-                                    ),
-                                  ],
-                                )
+                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          TextButton.icon(
+                                            style: TextButton.styleFrom(
+                                              padding: const EdgeInsets.all(
+                                                16,
+                                              ),
+                                              foregroundColor: Theme.of(context).colorScheme.error,
+                                            ),
+                                            icon: const Icon(
+                                              Icons.archive_outlined,
+                                            ),
+                                            onPressed: controller.leaveChat,
+                                            label: Text(
+                                              L10n.of(context)!.leave,
+                                            ),
+                                          ),
+                                          TextButton.icon(
+                                            style: TextButton.styleFrom(
+                                              padding: const EdgeInsets.all(
+                                                16,
+                                              ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.forum_outlined,
+                                            ),
+                                            onPressed: controller.recreateChat,
+                                            label: Text(
+                                              L10n.of(context)!.reopenChat,
+                                            ),
+                                          ),
+                                        ],
+                                      )
                                     : Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const ConnectionStatusHeader(),
-                                    ReactionsPicker(controller),
-                                    ReplyDisplay(controller),
-                                    ChatInputRow(controller),
-                                    ChatEmojiPicker(controller),
-                                  ],
-                                ),
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const ConnectionStatusHeader(),
+                                          ReactionsPicker(controller),
+                                          ReplyDisplay(controller),
+                                          ChatInputRow(controller),
+                                          ChatEmojiPicker(controller),
+                                        ],
+                                      ),
                               ),
                             ),
                         ],
@@ -923,9 +850,7 @@ class ChatView extends StatelessWidget {
                     ),
                     if (controller.dragging)
                       Container(
-                        color: Theme.of(context)
-                            .scaffoldBackgroundColor
-                            .withOpacity(0.9),
+                        color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
                         alignment: Alignment.center,
                         child: const Icon(
                           Icons.upload_outlined,
@@ -942,7 +867,6 @@ class ChatView extends StatelessWidget {
     );
   }
 }
-
 
 extension on List<Event> {
   int get firstIndexWhereNotError {
