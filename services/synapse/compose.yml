@@ -1,0 +1,14 @@
+name: famlink-matrix
+
+services:
+  synapse:
+    image: ${SYNAPSE_IMAGE:-matrixdotorg/synapse:latest}
+    container_name: famlink-synapse
+    restart: "no"
+    environment:
+      SYNAPSE_SERVER_NAME: ${SYNAPSE_SERVER_NAME:-localhost}
+      SYNAPSE_REPORT_STATS: ${SYNAPSE_REPORT_STATS:-no}
+    ports:
+      - "${SYNAPSE_PORT:-8008}:8008"
+    volumes:
+      - ./data:/data

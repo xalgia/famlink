@@ -1,62 +1,33 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-*.snap
 .DS_Store
-.local/
-.atom/
-.buildlog/
-.history
-.svn/
-prime
+Thumbs.db
 
-# libolm package
-/assets/js/package
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
+# Editor and local machine state
 .idea/
+.vscode/
+*.swp
+*.swo
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Local environment files
+.env
+.env.*
+!.env.example
 
-# Flutter/Dart/Pub related
-**/doc/api/
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
-/build/
+# Logs and build outputs
+*.log
+dist/
+build/
+coverage/
+node_modules/
 
-# Web related
-docs/tailwind.css
+# Gradle / Android
+.gradle/
+.kotlin/
+local.properties
+*.iml
+captures/
+externalNativeBuild/
+apps/**/build/
 
-# Exceptions to above rules.
-!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
-
-
-/key.jks
-/android/key.properties
-**/android/app/.cxx
-android/key.jks
-android/keys.json
-android/Gemfile.lock
-lib/l10n_old
-ios/Flutter/.last_build_id
-ios/Podfile.lock
-ios/Runner.ipa
-
-/windows/out
-/winuwp/out
-/linux/out
-/macos/out
-.vs
-olm
+# Local Matrix development state
+services/synapse/.env
+services/synapse/data/

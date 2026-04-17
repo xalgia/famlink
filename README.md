@@ -1,69 +1,73 @@
-![Screenshot](https://github.com/krille-chan/fluffychat/blob/main/assets/banner_transparent.png?raw=true)
+# FamLink
 
-[FluffyChat](https://fluffychat.im) is an open source, nonprofit and cute [[matrix](https://matrix.org)] client written in [Flutter](https://flutter.dev). The goal of the app is to create an easy to use instant messenger which is open source and accessible for everyone.
+FamLink is a private family voice-note intercom in early planning and scaffolding.
 
-### Links:
+The working project wiki lives in [docs/wiki/Home.md](docs/wiki/Home.md).
 
-- 🌐 [[Weblate] Translate FluffyChat into your language](https://hosted.weblate.org/projects/fluffychat/)
-- 🌍 [[m] Join the community](https://matrix.to/#/#fluffychat:matrix.org)
-- 📰 [[Mastodon] Get updates on social media](https://mastodon.art/@krille)
-- 🖥️ [[Famedly] Server hosting and professional support](https://famedly.com/kontakt)
-- 💝 [[Liberapay] Support FluffyChat development](https://de.liberapay.com/KrilleChritzelius)
+## Monorepo Layout
 
-<a href='https://ko-fi.com/C1C86VN53' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi5.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+- [apps/](apps/): mobile app clients.
+- [apps/android/](apps/android/): Kotlin Android scaffold using Jetpack Compose and Matrix Rust SDK Android components.
+- [services/](services/): local development services.
+- [services/synapse/](services/synapse/): debug-only local Synapse homeserver.
+- [scripts/dev/](scripts/dev/): developer helper scripts.
+- [docs/wiki/](docs/wiki/): planning wiki and decision records.
 
-### Screenshots:
+## Android
 
-![Screenshot](https://github.com/krille-chan/fluffychat/blob/main/docs/screenshots/product.jpeg?raw=true)
+Build the blank Android app:
 
-# Features
+```sh
+ANDROID_HOME=/home/x/Android/Sdk ./gradlew :apps:android:assembleDebug
+```
 
-- 📩 Send all kinds of messages, images and files
-- 🎙️ Voice messages
-- 📍 Location sharing
-- 🔔 Push notifications
-- 💬 Unlimited private and public group chats
-- 📣 Public channels with thousands of participants
-- 🛠️ Feature rich group moderation including all matrix features
-- 🔍 Discover and join public groups
-- 🌙 Dark mode
-- 🎨 Material You design
-- 📟 Hides complexity of Matrix IDs behind simple QR codes
-- 😄 Custom emotes and stickers
-- 🌌 Spaces
-- 🔄 Compatible with Element, Nheko, NeoChat and all other Matrix apps
-- 🔐 End to end encryption
-- 🔒 Encrypted chat backup
-- 😀 Emoji verification & cross signing
+The Android app currently depends on the Apache-2.0 Matrix Rust Android artifact:
 
-... and much more.
+```text
+org.matrix.rustcomponents:sdk-android
+```
 
+## Local Matrix
 
-# Installation
+Start local Synapse only when debugging:
 
-Please visit the website for installation instructions:
+```sh
+./scripts/dev/matrix-start.sh
+```
 
-- https://fluffychat.im
+Stop it:
 
-# How to build
+```sh
+./scripts/dev/matrix-stop.sh
+```
 
-Please visit the [Wiki](https://github.com/krille-chan/fluffychat/wiki) for build instructions:
+Follow logs:
 
-- https://github.com/krille-chan/fluffychat/wiki/How-To-Build
+```sh
+./scripts/dev/matrix-logs.sh
+```
 
+Create a local test user after Synapse is running:
 
-# Special thanks
+```sh
+./scripts/dev/matrix-register-user.sh alice password123
+```
 
-* <a href="https://github.com/fabiyamada">Fabiyamada</a> is a graphics designer and has made the fluffychat logo and the banner. Big thanks for her great designs.
+Synapse data is stored under `services/synapse/data/` and is ignored by Git.
 
-* <a href="https://github.com/advocatux">Advocatux</a> has made the Spanish translation with great love and care. He always stands by my side and supports my work with great commitment.
+## Local Wiki
 
-* Thanks to MTRNord and Sorunome for developing.
+- [Home](docs/wiki/Home.md)
+- [Project Brief](docs/wiki/Project-Brief.md)
+- [Product Notes](docs/wiki/Product-Notes.md)
+- [Architecture](docs/wiki/Architecture.md)
+- [Research](docs/wiki/Research.md)
+- [Glossary](docs/wiki/Glossary.md)
+- [Meeting Notes](docs/wiki/Meeting-Notes.md)
+- [Worklog](docs/wiki/Worklog.md)
+- [Decisions](docs/wiki/Decisions.md)
 
-* Also thanks to all translators and testers! With your help, fluffychat is now available in more than 12 languages.
+## Working Rhythm
 
-* <a href="https://github.com/googlefonts/noto-emoji/">Noto Emoji Font</a> for the awesome emojis.
-
-* <a href="https://github.com/madsrh/WoodenBeaver">WoodenBeaver</a> sound theme for the notification sound.
-
-* The Matrix Foundation for making and maintaining the [emoji translations](https://github.com/matrix-org/matrix-spec/blob/main/data-definitions/sas-emoji.json) used for emoji verification, licensed Apache 2.0
+Capture rough thinking in notes first, then promote stable choices into the brief, architecture notes, or decision records.
+Record active progress in the worklog as we go.
